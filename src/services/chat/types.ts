@@ -1,5 +1,6 @@
 import type { TranslationMessage } from '../../i18n/index.js'
 import type { ApiErrorKind } from '../api/client.js'
+import type { GeneratedImage } from '../imageGen.js'
 import type {
   ChatModel,
   MessageUsage,
@@ -62,8 +63,40 @@ export type TextPart = {
   isTemplate?: boolean
 }
 
-/** 服务端工具调用与结果块按协议原样保存；历史请求只回传 read_link 调用与结果 */
-export type ReplyBlock = ThinkingPart | TextPart | ServerToolBlock
+/** 客户端工具调用：参数经 input_json_delta 拼接，content_block_stop 时解析 */
+export type ToolUsePart = {
+  type: 'tool_use'
+  id: string
+  name: string
+  input: unknown
+  /** 参数 JSON 尚未解析成功；保留原文用于报错，正常解析后移除 */
+  partialJson?: string
+}
+
+/** 客户端工具结果：按协议属于紧随 assistant 的 user 消息，本地与调用存在同一条回复里 */
+export type ToolResultPart = {
+  type: 'tool_result'
+  tool_use_id: string
+  content: string
+  isError?: boolean
+}
+
+/** 内置生图工具的结果图片；只在本机展示，不进入模型上下文 */
+export type GeneratedImagePart = {
+  type: 'generated_image'
+  id: string
+  prompt: string
+  images: GeneratedImage[]
+}
+
+/** 服务端工具块原样保存；客户端工具调用与结果保存在同一回复里，历史请求按协议重放 */
+export type ReplyBlock =
+  | ThinkingPart
+  | TextPart
+  | ServerToolBlock
+  | ToolUsePart
+  | ToolResultPart
+  | GeneratedImagePart
 
 /**
  * pending：已发出请求，还没收到事件；streaming：正在接收；
@@ -79,8 +112,10 @@ export type AssistantMessage = MessageBranch & {
   model: ChatModel | null
   /** 请求时是否开启深度思考 */
   thinking?: boolean
-  /** 请求时是否声明 deepseek_web_search；关闭时仍声明 deepseek_read_url */
+  /** 请求时是否声明 deepseek_web_search */
   search?: boolean
+  /** 请求时是否声明 deepseek_read_url；旧回复没有记录时按默认开启处理 */
+  readLink?: boolean
   /** 本轮请求的系统信息快照；各回答版本独立保存，续写沿用。历史消息中缺省的快照保持为空。 */
   latestReminder?: string
   /** 是否允许作为续写前缀；仍需满足回复状态与内容限制。 */
@@ -105,6 +140,30 @@ export type AssistantMessage = MessageBranch & {
 
 export type Message = UserMessage | AssistantMessage
 
+/**
+ * 长上下文压缩块：模型通过 compress 工具把一段完整对话折成摘要。
+ * 原文仍保存在 session.messages；active 的块在请求里替换对应范围。
+ * children 是该范围里被折进来的旧块，用于逐层 decompress。
+ */
+export type CompressedBlock = {
+  /** b1、b2……会话内递增 */
+  id: string
+  startId: string
+  endId: string
+  /** 对应消息在系统提示里展示的 m00001 形式引用 */
+  startRef: string
+  endRef: string
+  summary: string
+  /** 1 = 原始消息，2+ = 由摘要再次折叠 */
+  tier: number
+  active: boolean
+  children: string[]
+  createdAt: number
+  /** 折叠前原文与摘要的估算 token，用于展示节省量 */
+  tokensBefore: number
+  tokensAfter: number
+}
+
 export type Session = {
   id: string
   title: string
@@ -114,6 +173,8 @@ export type Session = {
   messages: Message[]
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
+  /** 模型通过压缩工具维护的折叠块；undefined 表示从未压缩 */
+  compressions?: CompressedBlock[]
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */
