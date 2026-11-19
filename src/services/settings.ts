@@ -15,7 +15,10 @@ type Settings = {
   location: UserLocation | null
   ttsVoice: TtsVoice
   thinking: boolean
+  /** 工具配置里的智能搜索：关闭即不再向模型提供该工具 */
   search: boolean
+  /** 输入框里的搜索开关：只控制本次使用，不改变工具是否禁用 */
+  searchOn: boolean
   /** 阅读用户消息中的链接；默认开启，保持升级前的行为 */
   readLink: boolean
   /** 启用模型驱动的长上下文压缩（billion-context 功能级移植） */
@@ -31,6 +34,7 @@ const KEYS = {
   ttsVoice: 'seekgo:tts-voice',
   thinking: 'seekgo:thinking',
   search: 'seekgo:search',
+  searchOn: 'seekgo:search-on',
   readLink: 'seekgo:read-link',
   contextCompression: 'seekgo:context-compression',
   siderCollapsed: 'seekgo:sider-collapsed',
@@ -112,6 +116,8 @@ const initialThemePreference = (): ThemePreference => {
 /** 未保存过时使用服务端默认音色 stella（海星） */
 const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide' : 'stella')
 
+const initialReadLink = read(KEYS.readLink) !== 'false'
+
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
   locale: initialLocale(),
@@ -120,7 +126,8 @@ export const useSettings = create<Settings>(() => ({
   ttsVoice: initialTtsVoice(),
   thinking: read(KEYS.thinking) === 'true',
   search: read(KEYS.search) === 'true',
-  readLink: read(KEYS.readLink) !== 'false',
+  searchOn: read(KEYS.searchOn) !== 'false',
+  readLink: initialReadLink,
   contextCompression: read(KEYS.contextCompression) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
@@ -159,6 +166,11 @@ export const setThinking = (thinking: boolean) => {
 export const setSearch = (search: boolean) => {
   write(KEYS.search, String(search))
   useSettings.setState({ search })
+}
+
+export const setSearchOn = (searchOn: boolean) => {
+  write(KEYS.searchOn, String(searchOn))
+  useSettings.setState({ searchOn })
 }
 
 export const setReadLink = (readLink: boolean) => {

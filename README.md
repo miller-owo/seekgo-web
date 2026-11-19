@@ -36,7 +36,7 @@ Most AI chat clients need a server to hold API keys, proxy requests, or store co
 
 ### Search and tools
 
-- **Smart search** and **link reading** with source citations. Search depends on link reading; if either is off, the search action is disabled.
+- **Smart search** and **link reading** with source citations. The Tools switches disable the tools; the input toggle only closes search for current use. Search requires link reading; disabling link reading disables the search switch while keeping its state.
 - **Custom HTTP tools**: describe an endpoint with JSON Schema, and let the model call it. GET parameters become a query string; other methods send JSON. Results are clipped before they reach the model.
 - **Image generation** through OpenAI, Google Gemini, Seedream (Volcengine Ark), DashScope, xAI Grok, Zhipu GLM, or any OpenAI-compatible endpoint.
 
@@ -124,12 +124,12 @@ export default defineConfig(createConfig({ apiOrigin: 'https://your-gateway.exam
 
 ### Tools
 
-| Setting              | Behavior                                                                                                                                  |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Smart search**     | Declares the server-side search tool. Requires link reading.                                                                              |
-| **Read links**       | Declares the server-side link reader and enables search.                                                                                  |
-| **Custom tools**     | Each tool has a name, description, method, URL, optional headers, and a JSON Schema for parameters. CORS must be allowed by the endpoint. |
-| **Image generation** | Per-provider API key, endpoint, model, and output defaults. See the provider table below.                                                 |
+| Setting              | Behavior                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Smart search**     | Declares the server-side search tool when enabled. The input toggle can also close it for current use. Link reading is a prerequisite; disabling it disables this switch. |
+| **Read links**       | Declares the server-side link reader; disabling it disables the search switch while keeping its state.                                                                    |
+| **Custom tools**     | Each tool has a name, description, method, URL, optional headers, and a JSON Schema for parameters. CORS must be allowed by the endpoint.                                 |
+| **Image generation** | Per-provider API key, endpoint, model, and output defaults. See the provider table below.                                                                                 |
 
 Image generation providers and defaults:
 
@@ -171,7 +171,7 @@ Cost figures are **estimates** based on DeepSeek's published CNY prices (idle ba
 
 1. **Add your API key** in Settings and start a new chat.
 2. **Ask normally**, attach files, or use the microphone. Markdown, code, math, and diagrams render inline.
-3. **Turn on search** to let the model look things up and cite sources. Search also needs link reading.
+3. **Use the search toggle** in the input to close or reopen search for current use. Disabling smart search in Settings removes the tool; disabling link reading disables the search switch.
 4. **Add tools** in Settings → Tools when you want the model to call your own HTTP services.
 5. **Generate images** by asking for one; the active image provider is used unless you name another.
 6. **Long chats** can be folded into summaries automatically; restore originals whenever you need them.
@@ -286,14 +286,14 @@ There is no automated test suite yet, so also verify the relevant UI path manual
 
 ## Troubleshooting
 
-| Symptom                            | Likely cause                                                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| API key is rejected                | The key is invalid, expired, or the API origin does not match the key's service.                              |
-| Search action is disabled          | Smart search or link reading is off; search requires both.                                                    |
-| Custom tool or image request fails | The endpoint does not allow cross-origin browser requests, the key is missing, or the endpoint path is wrong. |
-| Generated image link stops working | The provider returned a temporary URL; regenerate or use a provider that returns base64 data.                 |
-| Chats disappeared                  | Site data or the browser profile was cleared; restore from an exported ZIP if available.                      |
-| Cost panel differs from the bill   | The panel estimates list prices; peak/idle, cache behavior, and billing adjustments can differ.               |
+| Symptom                            | Likely cause                                                                                                            |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| API key is rejected                | The key is invalid, expired, or the API origin does not match the key's service.                                        |
+| Search button is disabled          | Smart search is disabled in Tools, or link reading is disabled (the search switch is disabled while its state is kept). |
+| Custom tool or image request fails | The endpoint does not allow cross-origin browser requests, the key is missing, or the endpoint path is wrong.           |
+| Generated image link stops working | The provider returned a temporary URL; regenerate or use a provider that returns base64 data.                           |
+| Chats disappeared                  | Site data or the browser profile was cleared; restore from an exported ZIP if available.                                |
+| Cost panel differs from the bill   | The panel estimates list prices; peak/idle, cache behavior, and billing adjustments can differ.                         |
 
 ## Contributing
 

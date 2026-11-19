@@ -349,12 +349,7 @@ const ToolsSettings = () => {
         description={t(readLink ? 'settingsSearchDescription' : 'settingsSearchNeedsReadLink')}
         status={null}
         action={
-          <Switch
-            checked={search && readLink}
-            label={t('search')}
-            disabled={!readLink}
-            onChange={setSearch}
-          />
+          <Switch checked={search} label={t('search')} disabled={!readLink} onChange={setSearch} />
         }
       />
       <SettingCell

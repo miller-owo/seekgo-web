@@ -178,9 +178,9 @@ export const en = {
   settingsLocationCity: 'Select city',
   settingsLocationRegion: 'Select country or region',
   settingsToolsDescription:
-    'Enabled tools are declared to the model with each request, and changes apply to messages you send next. Search depends on link reading, and its switch stays in sync with the input area.',
+    'Enabled tools are declared with subsequent requests; switches in Settings disable them. Search depends on link reading; the input toggle only closes or reopens search for current use.',
   settingsSearchDescription: 'Let the model search the web for fresh information when needed',
-  settingsSearchNeedsReadLink: 'Search is unavailable while link reading is off',
+  settingsSearchNeedsReadLink: 'Search is disabled while link reading is disabled',
   settingsReadLink: 'Read links',
   settingsReadLinkDescription:
     'Read links in your messages and answer with the page content. Search depends on this.',
@@ -328,7 +328,8 @@ export const en = {
   deactivatedThinkTooltip: 'Think before responding to solve reasoning problems',
   thinkingSwitch: 'DeepThink',
   deactivatedSearchTooltip: 'Search the web when necessary',
-  searchToolsDisabledTooltip: 'Search or link reading is off in Tools',
+  searchToolDisabledTooltip: 'Search is disabled in Tools',
+  searchToolsDisabledTooltip: 'Search requires link reading; enable it in Tools',
   search: 'Search',
   uploadFile: 'Upload files',
   chatInputStopButtonTooltip: 'Stop',

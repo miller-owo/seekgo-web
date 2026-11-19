@@ -421,16 +421,16 @@ export const bindChatPersistence = () => {
   }
 }
 
-/** 按当前开关创建回复：阅读链接是搜索的前提，任一项关闭都按搜索关闭记录。 */
+/** 按当前开关创建回复：工具被禁用、输入框关闭或阅读链接关闭都按搜索关闭记录。 */
 const createReply = (): AssistantMessage => {
-  const { thinking, search, readLink } = useSettings.getState()
+  const { thinking, search, searchOn, readLink } = useSettings.getState()
   return {
     id: createId(),
     role: 'assistant',
     createdAt: Date.now(),
     model: MODEL,
     thinking,
-    search: search && readLink,
+    search: search && searchOn && readLink,
     readLink,
     prefix: true,
     status: 'pending',
@@ -898,13 +898,13 @@ export const continueReply = (sessionId: string, messageId: string) => {
   ) {
     return
   }
-  const { thinking, search, readLink } = useSettings.getState()
+  const { thinking, search, searchOn, readLink } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
     // 未记录请求配置的回复，续写时使用默认模型和当前开关。
     model: previous.model ?? MODEL,
     thinking: previous.thinking ?? thinking,
-    search: previous.search ?? (search && readLink),
+    search: previous.search ?? (search && searchOn && readLink),
     readLink: previous.readLink ?? readLink,
     status: 'pending',
     stopReason: undefined,

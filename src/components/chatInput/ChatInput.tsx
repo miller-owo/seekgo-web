@@ -7,7 +7,7 @@ import {
   IconStopFill16,
   IconThinkOutline14,
 } from '../base/icons.js'
-import { setSearch, setThinking, useSettings } from '../../services/settings.js'
+import { setSearchOn, setThinking, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
@@ -53,10 +53,17 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const searchOn = useSettings((state) => state.searchOn)
   const readLink = useSettings((state) => state.readLink)
-  // 阅读链接是智能搜索的前提；任一工具在设置里关闭时，输入框不再提供搜索入口。
-  const searchActive = search && readLink
-  const searchDisabled = !searchActive
+  // 工具配置负责禁用工具；输入框只关闭本次使用，关闭后仍可重新打开。
+  // 搜索依赖阅读链接，工具被禁用或阅读链接关闭时入口才不可用。
+  const searchActive = search && searchOn && readLink
+  const searchDisabled = !search || !readLink
+  const searchTooltip = !readLink
+    ? t('searchToolsDisabledTooltip')
+    : !search
+      ? t('searchToolDisabledTooltip')
+      : t('deactivatedSearchTooltip')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
@@ -218,17 +225,15 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('thinkingSwitch')}</span>
             </button>
           </Tooltip>
-          <Tooltip
-            content={t(searchDisabled ? 'searchToolsDisabledTooltip' : 'deactivatedSearchTooltip')}
-          >
+          <Tooltip content={searchTooltip}>
             <button
               type="button"
               className={clsx(styles.toggle, searchActive && styles.selected)}
               aria-label={t('search')}
               aria-pressed={searchActive}
               disabled={searchDisabled}
-              title={searchDisabled ? t('searchToolsDisabledTooltip') : undefined}
-              onClick={() => setSearch(!search)}
+              title={searchDisabled ? searchTooltip : undefined}
+              onClick={() => setSearchOn(!searchOn)}
             >
               <IconGlobeLanguageOutline14 />
               <span className={styles.toggleLabel}>{t('search')}</span>
