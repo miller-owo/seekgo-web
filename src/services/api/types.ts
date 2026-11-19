@@ -121,6 +121,17 @@ export type ServerToolBlock =
 /** 用于识别客户端工具调用的内容块类型 */
 export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: unknown }
 
+/** 客户端工具调用：应用执行后回传同名 tool_result */
+export type ToolUseBlockParam = ToolUseBlock
+
+/** 客户端工具结果：只能放在 user 消息里，每个 tool_use 恰好一条 */
+export type ToolResultBlockParam = {
+  type: 'tool_result'
+  tool_use_id: string
+  content?: string
+  is_error?: boolean
+}
+
 // ---------- 请求 ----------
 
 export type TextBlockParam = { type: 'text'; text: string }
@@ -149,6 +160,7 @@ export type WebFetchToolResultBlockParam = WebFetchToolResultBlock
 export type AssistantBlockParam =
   | TextBlockParam
   | ThinkingBlock
+  | ToolUseBlockParam
   | ServerToolUseBlockParam
   | WebSearchToolResultBlockParam
   | WebFetchToolResultBlockParam
@@ -157,7 +169,10 @@ export type AssistantBlockParam =
 export type MessageParam =
   /** Chat Engine 扩展角色，位于对应 user 前；需服务端支持 latest_reminder。 */
   | { role: 'latest_reminder'; content: string }
-  | { role: 'user'; content: string | (FileBlockParam | TextBlockParam)[] }
+  | {
+      role: 'user'
+      content: string | (FileBlockParam | TextBlockParam | ToolResultBlockParam)[]
+    }
   | { role: 'assistant'; content: AssistantBlockParam[] }
 
 /** 开启联网搜索与边想边搜 */
@@ -172,12 +187,20 @@ export type DeepseekReadUrlTool = {
   name: 'deepseek_read_url'
 }
 
+/** 客户端工具声明：不能带 type 字段，input_schema 顶层必须是 object */
+export type ClientTool = {
+  name: string
+  description?: string
+  input_schema: Record<string, unknown>
+}
+
 export type CreateMessageRequest = {
   model: ChatModel
   system: string
   messages: MessageParam[]
   thinking: { type: 'enabled' | 'disabled' }
-  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
+  /** 服务端工具与自定义客户端工具；全部关闭时不传该字段 */
+  tools?: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientTool)[]
   safety_check: { level: 'high' }
   title?: { enabled: boolean }
 }
