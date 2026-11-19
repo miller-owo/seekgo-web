@@ -330,5 +330,5 @@ The following attribution is provided under the CC BY-NC-SA 4.0 license. The wha
 
 - [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo) for the original interface.
 - [shanliuling/dsh-image-gen](https://github.com/shanliuling/dsh-image-gen) for the image-generation design and provider model.
-- [ranxianglei/billion-context](https://github.com/ranxianglei/billion-context) for the model-driven context-compression approach.
+- [ranxianglei/billion-context](https://github.com/ranxianglei/billion-context) for the model-driven context-compression and analysis-panel approach.
 - The React, rspack, KaTeX, Mermaid, Prism, and idb communities.

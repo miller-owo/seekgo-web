@@ -330,5 +330,5 @@ SeekGo 的 Logo 基于鲸鱼娘形象改编，使用 GPT Image 2.5 制作而来�
 
 - [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo)：原始界面。
 - [shanliuling/dsh-image-gen](https://github.com/shanliuling/dsh-image-gen)：生图能力与 Provider 设计。
-- [ranxianglei/billion-context](https://github.com/ranxianglei/billion-context)：模型驱动的上下文压缩思路。
+- [ranxianglei/billion-context](https://github.com/ranxianglei/billion-context)：模型驱动的上下文压缩与数据面板、费用分析思路。
 - React、rspack、KaTeX、Mermaid、Prism 和 idb 社区。

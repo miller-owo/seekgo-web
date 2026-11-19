@@ -277,7 +277,7 @@ export const en = {
   aboutCreditImageGen:
     'A functional port of the image generation capability: built-in OpenAI, Gemini, Seedream, DashScope, Grok, GLM and OpenAI-compatible image providers plus in-chat image display. The original plugin’s ComfyUI and subscription providers, canvas, gallery and prompt library are not included.',
   aboutCreditCompression:
-    'A functional port of long-context compression: the model can call compress / decompress / search_context / acp_status to fold older messages into summaries while the originals stay on this device.',
+    'A functional port of long-context compression and the analysis panel: the model can call compress / decompress / search_context / acp_status to fold older messages into summaries while the originals stay on this device; the panel’s token, cache, compression-block, and cost estimates also follow the original project.',
   aboutLicenseMitAttribution: 'MIT + attribution term',
   aboutBillionAttribution: 'This product uses a functionally ported version of billion-context.',
   aboutCreditChatDemo: 'The SeekGo interface is derived from deepseek-ai/chat-demo.',

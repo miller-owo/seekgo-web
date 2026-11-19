@@ -43,8 +43,10 @@ Copyright (c) 2026 ranxianglei
 SeekGo includes a functionally ported, simplified implementation of the
 long-context compression idea from billion-context: automatic summarization
 of older conversation rounds, summary-based context injection, and the
-ability to view or clear the compressed context. The original project is a
-local proxy that rewrites Anthropic/OpenAI streams and injects
+ability to view or clear the compressed context. SeekGo's in-app analysis
+panel also adapts billion-context's token, compression-block, cache, and
+cost analysis ideas. The original project is a local proxy that rewrites
+Anthropic/OpenAI streams and injects
 compress/decompress/search_context/acp_status tools; that proxy, acp-kernel,
 and its multi-client integrations are not included.
 

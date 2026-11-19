@@ -263,7 +263,7 @@ export const zh = {
   aboutCreditImageGen:
     '图像生成能力的功能级移植：内置 OpenAI、Gemini、Seedream、DashScope、Grok、GLM 与 OpenAI 兼容生图工具和聊天内图片展示；原插件的 ComfyUI、订阅账号、画布、图库和灵感库未包含。',
   aboutCreditCompression:
-    '长上下文压缩能力的功能级移植：模型可调用 compress / decompress / search_context / acp_status，把较早的对话折成摘要，原文仍保存在本机。',
+    '长上下文压缩与数据面板的功能级移植：模型可调用 compress / decompress / search_context / acp_status，把较早的对话折成摘要，原文仍保存在本机；分析面板的 token、缓存、压缩块与费用估算也参考了原项目。',
   aboutLicenseMitAttribution: 'MIT + 署名条款',
   aboutBillionAttribution: '本产品使用了 billion-context 的功能级移植。',
   aboutCreditChatDemo: 'SeekGo 的界面基于 deepseek-ai/chat-demo 改造。',
