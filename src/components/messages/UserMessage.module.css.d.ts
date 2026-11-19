@@ -1,6 +1,7 @@
 declare const styles: {
   readonly "container": string;
   readonly "isFirst": string;
+  readonly "enter": string;
   readonly "actions": string;
   readonly "files": string;
   readonly "filesWithDocuments": string;

@@ -43,6 +43,8 @@ export const UserMessage = memo(function UserMessage({
   const [draft, setDraft] = useState(message.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMobile = useIsMobile()
+  // 刚发出的消息播一次入场动画；读历史记录或切会话时整页淡入即可
+  const [enter] = useState(() => Date.now() - message.createdAt < 1000)
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
 
   useLayoutEffect(() => {
@@ -61,7 +63,7 @@ export const UserMessage = memo(function UserMessage({
   }
 
   return (
-    <div className={clsx(styles.container, isFirst && styles.isFirst)}>
+    <div className={clsx(styles.container, isFirst && styles.isFirst, enter && styles.enter)}>
       {message.files.length > 0 ? (
         <div
           className={clsx(

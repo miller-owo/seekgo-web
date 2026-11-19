@@ -70,6 +70,7 @@ const SettingsContent = () => {
       <Modal
         title={t('settings')}
         closable
+        dismissable={!historyDelete.busy}
         className={styles.dialog}
         mainClassName={styles.dialogMain}
         onClose={() => {
@@ -93,7 +94,7 @@ const SettingsContent = () => {
             </button>
           ))}
         </div>
-        <div role="tabpanel" className={styles.content}>
+        <div role="tabpanel" key={section} className={clsx(styles.content, styles.sectionEnter)}>
           {section === 'general' ? (
             <>
               <ThemeSetting />
@@ -142,6 +143,7 @@ const DeleteAllConfirm = ({
   return (
     <Modal
       title={t('deleteAllSessionsModalTitle')}
+      dismissable={!historyDelete.busy}
       className={styles.deleteConfirm}
       onClose={historyDelete.cancel}
       footer={

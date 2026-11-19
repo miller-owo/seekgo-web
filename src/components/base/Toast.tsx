@@ -1,35 +1,46 @@
 import clsx from 'clsx'
+import { useRef } from 'react'
+import { usePresence } from '../../app/motion.js'
 import { useTranslate } from '../../i18n/index.js'
 import { IconToastError16 } from './icons.js'
 import { useToast } from './toastState.js'
 import styles from './Toast.module.css'
 
+/** 顶部轻提示：出现时下滑淡入，消失前先淡出，新提示替换旧提示 */
 export const Toast = () => {
   const t = useTranslate()
   const { id, message } = useToast()
-  if (!message) {
+  // 退场期间消息已置空，保留最后一条内容继续渲染
+  const lastRef = useRef(message)
+  if (message) {
+    lastRef.current = message
+  }
+  const { mounted, closing } = usePresence(Boolean(message), 180)
+  const shown = message ?? lastRef.current
+  if (!mounted || !shown) {
     return null
   }
-  if (typeof message === 'string') {
+  const className = clsx(styles.toast, !message && closing && styles.closing)
+  if (typeof shown === 'string') {
     return (
-      <div key={id} className={styles.toast} role="status">
-        {message}
+      <div key={id} className={className} role="status">
+        {shown}
       </div>
     )
   }
-  const error = message.type === 'error'
+  const error = shown.type === 'error'
   return (
-    <div key={id} className={clsx(styles.toast, error && styles.error)} role="status">
+    <div key={id} className={clsx(className, error && styles.error)} role="status">
       {error ? (
         <span className={styles.icon}>
           <IconToastError16 />
         </span>
       ) : null}
       <span className={styles.content}>
-        {t(message.key, message.params)}
-        {message.link ? (
-          <a className={styles.link} href={message.link.href} target="_blank" rel="noreferrer">
-            {t(message.link.key)}
+        {t(shown.key, shown.params)}
+        {shown.link ? (
+          <a className={styles.link} href={shown.link.href} target="_blank" rel="noreferrer">
+            {t(shown.link.key)}
           </a>
         ) : null}
       </span>

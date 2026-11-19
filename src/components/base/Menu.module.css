@@ -14,6 +14,28 @@
     0 0 1px rgba(0, 0, 0, 0.2),
     0 0 4px rgba(0, 0, 0, 0.02),
     0 12px 32px rgba(0, 0, 0, 0.08);
+  transform-origin: top center;
+  animation: menu-in var(--ds-motion-fast) var(--ds-motion-ease-out);
+  will-change: transform, opacity;
+
+  &.closing {
+    pointer-events: none;
+    animation: menu-out var(--ds-motion-fast) var(--ds-motion-ease-in) forwards;
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.98);
+  }
 }
 
 .option {

@@ -3,6 +3,14 @@
   inset: 0;
   display: flex;
   flex-direction: column;
+  animation: view-in var(--ds-motion-base) var(--ds-motion-ease-out);
+}
+
+/* 欢迎页与会话页切换、切换会话时整页淡入 */
+@keyframes view-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .header {
@@ -27,6 +35,7 @@
 
 .withCollapsedSider {
   margin-left: 113px;
+  transition: margin-left var(--ds-motion-slow) var(--ds-motion-ease-out);
 }
 
 .inputContainer {

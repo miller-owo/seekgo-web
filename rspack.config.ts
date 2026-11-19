@@ -7,6 +7,10 @@ import { rspack, type Configuration } from '@rspack/core'
 const dev = process.env.NODE_ENV !== 'production'
 const targets = ['chrome >= 105', 'edge >= 105', 'safari >= 16', 'firefox >= 110']
 const root = path.dirname(fileURLToPath(import.meta.url))
+/** 开发服务器端口/监听地址，由 `dsgo` 启动器通过环境变量覆盖 */
+const port = Number(process.env.DSGO_PORT ?? 3040)
+const host = process.env.DSGO_HOST || '127.0.0.1'
+const openBrowser = process.env.DSGO_OPEN === '1'
 const { version } = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8')
 ) as { version: string }
@@ -71,6 +75,7 @@ export const createConfig = ({
         type: 'javascript/auto',
       },
       { test: /\.(woff2?|ttf)$/, type: 'asset/resource' },
+      { test: /\.(png|jpe?g|webp|gif|svg)$/, type: 'asset/resource' },
     ],
   },
   plugins: [
@@ -78,6 +83,7 @@ export const createConfig = ({
     new rspack.HtmlRspackPlugin({
       template: './src/index.html',
       scriptLoading: 'defer',
+      favicon: path.resolve(root, 'src/assets/seekgo-favicon.png'),
       meta: { 'application-version': version },
     }),
     new rspack.DefinePlugin({ __API_ORIGIN__: JSON.stringify(apiOrigin) }),
@@ -86,7 +92,7 @@ export const createConfig = ({
     }),
   ],
   performance: { hints: false },
-  devServer: { port: 8090, ...devServer },
+  devServer: { port, host, open: openBrowser, ...devServer },
 })
 
 // eslint-disable-next-line import/no-default-export

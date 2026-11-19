@@ -34,4 +34,12 @@
   max-width: calc(100% - 40px);
   margin: 0 auto;
   padding-bottom: 24px;
+  animation: column-in var(--ds-motion-base) var(--ds-motion-ease-out);
+}
+
+/* 切换会话时消息区淡入 */
+@keyframes column-in {
+  from {
+    opacity: 0;
+  }
 }

@@ -14,6 +14,12 @@
   font-size: 12px;
   line-height: 1.5;
   pointer-events: none;
+  animation: tooltip-in var(--ds-motion-fast) var(--ds-motion-ease-out);
+  will-change: opacity, transform;
+
+  &.closing {
+    animation: tooltip-out 0.1s var(--ds-motion-ease-in) forwards;
+  }
 
   [data-ds-dark-theme] & {
     color: var(--dsw-alias-label-primary);
@@ -21,5 +27,19 @@
       0 6px 16px 0 rgba(0, 0, 0, 0.08),
       0 3px 6px -4px rgba(0, 0, 0, 0.12),
       0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  }
+}
+
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+@keyframes tooltip-out {
+  to {
+    opacity: 0;
+    transform: translateY(2px);
   }
 }

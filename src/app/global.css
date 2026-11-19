@@ -43,6 +43,25 @@ body.change-theme *::after {
   transition: none !important;
 }
 
+/* 主题切换用 View Transitions 做一次整体交叉淡入，浏览器不支持时直接切换 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--ds-motion-base);
+  animation-timing-function: var(--ds-motion-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @media not all and (min-width: 768px) {
   html,
   body,

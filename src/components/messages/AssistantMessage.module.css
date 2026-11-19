@@ -11,6 +11,18 @@
   }
 }
 
+/* 新回答淡入并轻微上移 */
+.enter {
+  animation: answer-in var(--ds-motion-slow) var(--ds-motion-ease-out) both;
+}
+
+@keyframes answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 .waiting {
   display: flex;
   align-items: center;

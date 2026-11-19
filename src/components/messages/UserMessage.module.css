@@ -13,6 +13,18 @@
   }
 }
 
+/* 新发出的消息从下方轻轻浮入 */
+.enter {
+  animation: message-in var(--ds-motion-base) var(--ds-motion-ease-out) both;
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 .files {
   display: flex;
   flex-wrap: wrap;
@@ -77,6 +89,14 @@
   border-radius: 22px;
   background-color: var(--dsw-alias-bg-base);
   overflow: hidden;
+  animation: editor-in var(--ds-motion-fast) var(--ds-motion-ease-out);
+}
+
+@keyframes editor-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
 }
 
 .textarea {

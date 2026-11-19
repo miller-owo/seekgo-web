@@ -9,11 +9,14 @@
   background-color: transparent;
   cursor: pointer;
   font-size: 16px;
-  transition: background-color var(--ds-transition-duration) var(--ds-ease-in-out);
+  transition:
+    background-color var(--ds-transition-duration) var(--ds-ease-in-out),
+    transform 0.12s var(--ds-motion-ease-out);
   outline: none;
 
   &:active:not(:disabled) {
     background-color: var(--dsw-alias-interactive-bg-hover);
+    transform: scale(0.9);
   }
 
   @media (hover: hover) {

@@ -20,15 +20,19 @@ type Settings = {
 }
 
 const KEYS = {
-  apiKey: 'chat-demo:api-key',
-  locale: 'chat-demo:locale',
-  location: 'chat-demo:location',
-  themePreference: 'chat-demo:theme-preference',
-  ttsVoice: 'chat-demo:tts-voice',
-  thinking: 'chat-demo:thinking',
-  search: 'chat-demo:search',
-  siderCollapsed: 'chat-demo:sider-collapsed',
+  apiKey: 'seekgo:api-key',
+  locale: 'seekgo:locale',
+  location: 'seekgo:location',
+  themePreference: 'seekgo:theme-preference',
+  ttsVoice: 'seekgo:tts-voice',
+  thinking: 'seekgo:thinking',
+  search: 'seekgo:search',
+  siderCollapsed: 'seekgo:sider-collapsed',
 } as const
+
+/** 旧品牌（chat-demo）的存储前缀，升级后尽量沿用已有设置 */
+const LEGACY_PREFIX = 'chat-demo:'
+const KEY_PREFIX = 'seekgo:'
 
 const read = (key: string) => {
   try {
@@ -49,6 +53,21 @@ const write = (key: string, value: string | null) => {
     // 存储不可用时只在内存中生效
   }
 }
+
+/** 从旧品牌设置迁移一次，升级后不用重新填写 API Key 等 */
+const migrateLegacySettings = () => {
+  for (const key of Object.values(KEYS)) {
+    if (read(key) !== null) {
+      continue
+    }
+    const legacy = read(LEGACY_PREFIX + key.slice(KEY_PREFIX.length))
+    if (legacy !== null) {
+      write(key, legacy)
+    }
+  }
+}
+
+migrateLegacySettings()
 
 /** 位置选择模式跟随浏览器语言，与应用内选择的界面语言无关。 */
 export const isChineseBrowser = (): boolean =>

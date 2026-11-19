@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { useSettings, type ThemePreference } from '../services/settings.js'
+import { prefersReducedMotion } from './motion.js'
 
 export type Theme = 'light' | 'dark'
 
@@ -29,7 +30,7 @@ const syncPageBackground = () => {
 }
 
 /** 同步页面主题、根画布背景和支持 theme-color 的浏览器栏。 */
-const applyTheme = (theme: Theme) => {
+const commitTheme = (theme: Theme) => {
   const body = document.body
   // 主题切换帧禁用过渡，使页面颜色同步更新
   body.classList.add('change-theme')
@@ -48,6 +49,24 @@ const applyTheme = (theme: Theme) => {
   setTimeout(() => {
     body.classList.remove('change-theme')
   }, 0)
+}
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (update: () => void) => { finished: Promise<void> }
+}
+
+/** 切换主题：支持的浏览器用 View Transitions 交叉淡入，其余直接切换 */
+const applyTheme = (theme: Theme) => {
+  const startViewTransition = (document as ViewTransitionDocument).startViewTransition
+  if (!startViewTransition || prefersReducedMotion()) {
+    commitTheme(theme)
+    return
+  }
+  try {
+    startViewTransition.call(document, () => commitTheme(theme))
+  } catch {
+    commitTheme(theme)
+  }
 }
 
 let appliedTheme: Theme | null = null

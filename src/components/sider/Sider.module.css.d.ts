@@ -1,6 +1,10 @@
 declare const styles: {
+  readonly "shell": string;
+  readonly "shellCollapsed": string;
   readonly "sider": string;
   readonly "top": string;
+  readonly "brand": string;
+  readonly "brandMark": string;
   readonly "appName": string;
   readonly "newChat": string;
   readonly "newChatIcon": string;
@@ -16,6 +20,7 @@ declare const styles: {
   readonly "collapsedGroup": string;
   readonly "drawer": string;
   readonly "drawerMask": string;
+  readonly "mobileShell": string;
   readonly "mobile": string;
 };
 export = styles;

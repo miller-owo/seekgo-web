@@ -16,11 +16,35 @@
   padding: 0 32px 64px;
 }
 
+/* 品牌标识与问候语同一行，作为空状态的标题 */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 21px;
+  animation: head-in 0.46s var(--ds-motion-ease-out) both;
+}
+
+.brandMark {
+  display: block;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+@keyframes head-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
 .greeting {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 21px;
   font-size: 24px;
   line-height: 32px;
   font-weight: 600;
@@ -28,7 +52,29 @@
   color: var(--dsw-alias-label-primary);
 }
 
+/* 问候语先落位，输入框随后跟上来 */
+.chatInput {
+  width: 100%;
+  animation: chat-input-in 0.5s var(--ds-motion-ease-out) 140ms both;
+}
+
+@keyframes chat-input-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
 @media (max-width: 439px) {
+  .head {
+    gap: 8px;
+  }
+
+  .brandMark {
+    width: 24px;
+    height: 24px;
+  }
+
   .greeting {
     font-size: 20px;
     line-height: 28px;
@@ -50,9 +96,14 @@
     padding: 0 16px env(safe-area-inset-bottom);
   }
 
-  .greeting {
+  .head {
     flex-shrink: 0;
     margin: auto 0;
+  }
+
+  .brandMark {
+    width: 26px;
+    height: 26px;
   }
 
   .caveat {

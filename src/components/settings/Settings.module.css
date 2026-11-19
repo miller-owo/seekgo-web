@@ -70,6 +70,18 @@
   overflow-y: auto;
 }
 
+/* 切换「通用设置 / 数据管理」时内容轻微推入 */
+.sectionEnter {
+  animation: section-in var(--ds-motion-base) var(--ds-motion-ease-out);
+}
+
+@keyframes section-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+
 .cell {
   box-sizing: border-box;
   flex-shrink: 0;

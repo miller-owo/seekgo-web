@@ -8,9 +8,30 @@
   justify-content: center;
   background-color: rgba(0, 0, 0, var(--overlay-opacity));
   backdrop-filter: blur(2px);
+  animation: overlay-in var(--ds-motion-base) var(--ds-motion-ease-out);
+  will-change: opacity;
 
   [data-ds-dark-theme] & {
     --overlay-opacity: 0.6;
+  }
+
+  &.closing {
+    pointer-events: none;
+    animation: overlay-out var(--ds-motion-fast) var(--ds-motion-ease-in) forwards;
+  }
+}
+
+/* 弹窗本体：淡入 + 轻微上浮放大，退场反向 */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+}
+
+@keyframes overlay-out {
+  to {
+    opacity: 0;
   }
 }
 
@@ -31,6 +52,51 @@
     0 0 1px 0 rgba(0, 0, 0, 0.2),
     0 0 4px 0 rgba(0, 0, 0, 0.02),
     0 12px 32px 0 rgba(0, 0, 0, 0.08);
+  animation: dialog-in var(--ds-motion-slow) var(--ds-motion-ease-out);
+  will-change: transform, opacity;
+
+  .closing & {
+    animation: dialog-out var(--ds-motion-fast) var(--ds-motion-ease-in) forwards;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+/* 移动端设置弹窗是底部面板，从下方滑入 */
+@media not all and (min-width: 768px) {
+  .content {
+    animation-name: sheet-in;
+  }
+
+  .closing .content {
+    animation-name: sheet-out;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
 }
 
 .header {

@@ -1,5 +1,7 @@
+import clsx from 'clsx'
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { MOTION, usePresence } from '../../app/motion.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { useAnchoredPosition, useDelayedOpen } from './anchored.js'
 import styles from './Tooltip.module.css'
@@ -9,7 +11,7 @@ export type TooltipPlacement = 'top' | 'bottom'
 const ENTER_DELAY = 100
 
 /**
- * 悬停 100ms 后出现，离开立即消失，移动端不显示。
+ * 悬停 100ms 后出现，离开时淡出收起，移动端不显示。
  * 触发元素外包一层 display: contents，不影响布局。
  */
 export const Tooltip = ({
@@ -23,8 +25,10 @@ export const Tooltip = ({
 }) => {
   const isMobile = useIsMobile()
   const { open, setOpen, schedule, cancel } = useDelayedOpen()
+  const visible = open && !isMobile && Boolean(content)
+  const { mounted, closing } = usePresence(visible, MOTION.fast)
   const { anchorRef, floatingRef, position } = useAnchoredPosition<HTMLSpanElement, HTMLDivElement>(
-    open,
+    mounted,
     { side: placement, align: 'center', measureFirstChild: true, measureKey: content }
   )
 
@@ -40,8 +44,6 @@ export const Tooltip = ({
     return () => window.removeEventListener('scroll', onScroll, true)
   }, [open, setOpen])
 
-  const visible = open && !isMobile && Boolean(content)
-
   return (
     <>
       <span
@@ -52,12 +54,12 @@ export const Tooltip = ({
       >
         {children}
       </span>
-      {visible
+      {mounted
         ? createPortal(
             <div
               ref={floatingRef}
               role="tooltip"
-              className={styles.tooltip}
+              className={clsx(styles.tooltip, closing && styles.closing)}
               style={position ?? { top: 0, left: 0, visibility: 'hidden' }}
             >
               {content}

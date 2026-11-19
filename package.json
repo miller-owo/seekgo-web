@@ -1,13 +1,16 @@
 {
-  "name": "chat-demo",
-  "version": "0.1.1",
-  "description": "基于 DeepSeek API 的静态聊天示例。",
+  "name": "seekgo-web",
+  "version": "1.0.0",
+  "description": "SeekGo：基于 DeepSeek API 的 AI 对话应用，纯前端、可直接静态部署。",
   "license": "MIT",
   "private": true,
   "type": "module",
+  "bin": {
+    "dsgo": "./bin/dsgo.mjs"
+  },
   "scripts": {
     "dev": "rspack serve -c rspack.config.ts",
-    "build": "rm -rf dist && NODE_ENV=production rspack build -c rspack.config.ts",
+    "build": "cross-env NODE_ENV=production rspack build -c rspack.config.ts",
     "type": "tsc -p tsconfig.json",
     "lint": "oxlint src rspack.config.ts",
     "format": "oxfmt --write ."
@@ -40,6 +43,7 @@
     "@rspack/dev-server": "2.0.1",
     "@swc/helpers": "0.5.23",
     "@types/node": "~20.9.2",
+    "cross-env": "10.1.0",
     "oxfmt": "0.48.0",
     "oxlint": "1.63.0",
     "typescript": "7.0.2"

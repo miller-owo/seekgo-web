@@ -1,5 +1,7 @@
 import clsx from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
+import { MOTION, usePresence } from '../../app/motion.js'
+import seekgoMark from '../../assets/seekgo-mark.png'
 import { useTranslate } from '../../i18n/index.js'
 import { IconPanelLeftOutline16, IconSettingsOutline16, NewChatIcon } from '../base/icons.js'
 import { setSiderCollapsed } from '../../services/settings.js'
@@ -15,8 +17,17 @@ import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import styles from './Sider.module.css'
 
-/** 展开的侧边栏：名称与收起按钮、开启新对话、按时间分组的会话列表、底部设置；移动端放在抽屉里，收起按钮关闭抽屉 */
-export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
+/**
+ * 展开的侧边栏：名称与收起按钮、开启新对话、按时间分组的会话列表、底部设置；
+ * 移动端放在抽屉里，收起按钮关闭抽屉。桌面端收起时不卸载，靠外层的宽度过渡滑出。
+ */
+export const Sider = ({
+  mobile = false,
+  collapsed = false,
+}: {
+  mobile?: boolean
+  collapsed?: boolean
+}) => {
   const t = useTranslate()
   const sessions = useChatStore((state) => state.sessions)
   const activeId = useChatStore((state) => state.activeId)
@@ -50,106 +61,127 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   }, [])
 
   return (
-    <div className={clsx(styles.sider, mobile && styles.mobile)}>
-      <div className={styles.top}>
-        <div className={styles.appName}>{t('appName')}</div>
-        <IconButton
-          size="m"
-          icon={<IconPanelLeftOutline16 />}
-          tooltip={t('collapseSiderbarButton')}
-          tooltipPlacement="bottom"
-          onClick={() => (mobile ? closeMobileSider() : setSiderCollapsed(true))}
-        />
-      </div>
-      <button
-        type="button"
-        className={styles.newChat}
-        onClick={() => {
-          newChat()
-          closeMobileSider()
-        }}
-      >
-        <span className={styles.newChatIcon}>
-          <NewChatIcon />
-        </span>
-        {t('newChat')}
-      </button>
-      <div className={styles.listWrap}>
-        <div className={styles.list}>
-          {groups.map((group) => (
-            <div key={group.key} className={styles.section}>
-              <div className={styles.sectionHeader}>{group.label}</div>
-              {group.sessions.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  session={session}
-                  active={session.id === activeId}
-                  onDelete={() => setDeleting(session)}
-                />
-              ))}
-            </div>
-          ))}
+    <div
+      className={clsx(
+        styles.shell,
+        mobile && styles.mobileShell,
+        collapsed && !mobile && styles.shellCollapsed
+      )}
+      aria-hidden={collapsed && !mobile ? true : undefined}
+    >
+      <div className={clsx(styles.sider, mobile && styles.mobile)}>
+        <div className={styles.top}>
+          <div className={styles.brand}>
+            <img className={styles.brandMark} src={seekgoMark} alt="" width={24} height={24} />
+            <span className={styles.appName}>{t('appName')}</span>
+          </div>
+          <IconButton
+            size="m"
+            icon={<IconPanelLeftOutline16 />}
+            tooltip={t('collapseSiderbarButton')}
+            tooltipPlacement="bottom"
+            onClick={() => (mobile ? closeMobileSider() : setSiderCollapsed(true))}
+          />
         </div>
-      </div>
-      <div className={styles.bottom}>
-        <button type="button" className={styles.settings} onClick={() => openSettings('general')}>
-          <span className={styles.settingsIcon}>
-            <IconSettingsOutline16 />
-          </span>
-          <span className={styles.settingsLabel}>{t('settings')}</span>
-        </button>
-      </div>
-      {deleting ? (
-        <Modal
-          title={t('deleteSessionModalContentTitle')}
-          onClose={() => {
-            if (!deletePending) {
-              setDeleting(null)
-            }
+        <button
+          type="button"
+          className={styles.newChat}
+          onClick={() => {
+            newChat()
+            closeMobileSider()
           }}
-          footer={
-            <>
-              <Button variant="outlined" disabled={deletePending} onClick={() => setDeleting(null)}>
-                {t('cancel')}
-              </Button>
-              <Button
-                variant="danger"
-                disabled={deletePending}
-                onClick={async () => {
-                  setDeletePending(true)
-                  try {
-                    if (await removeSession(deleting.id)) {
-                      setDeleting(null)
-                    } else {
-                      showToast({ key: 'sessionDeleteFailed', type: 'error' })
-                    }
-                  } finally {
-                    setDeletePending(false)
-                  }
-                }}
-              >
-                {t('delete')}
-              </Button>
-            </>
-          }
         >
-          {t('deleteSessionWithFilesDescription')}
-        </Modal>
-      ) : null}
+          <span className={styles.newChatIcon}>
+            <NewChatIcon />
+          </span>
+          {t('newChat')}
+        </button>
+        <div className={styles.listWrap}>
+          <div className={styles.list}>
+            {groups.map((group) => (
+              <div key={group.key} className={styles.section}>
+                <div className={styles.sectionHeader}>{group.label}</div>
+                {group.sessions.map((session) => (
+                  <SessionItem
+                    key={session.id}
+                    session={session}
+                    active={session.id === activeId}
+                    onDelete={() => setDeleting(session)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={styles.bottom}>
+          <button type="button" className={styles.settings} onClick={() => openSettings('general')}>
+            <span className={styles.settingsIcon}>
+              <IconSettingsOutline16 />
+            </span>
+            <span className={styles.settingsLabel}>{t('settings')}</span>
+          </button>
+        </div>
+        {deleting ? (
+          <Modal
+            title={t('deleteSessionModalContentTitle')}
+            dismissable={!deletePending}
+            onClose={() => {
+              if (!deletePending) {
+                setDeleting(null)
+              }
+            }}
+            footer={
+              <>
+                <Button
+                  variant="outlined"
+                  disabled={deletePending}
+                  onClick={() => setDeleting(null)}
+                >
+                  {t('cancel')}
+                </Button>
+                <Button
+                  variant="danger"
+                  disabled={deletePending}
+                  onClick={async () => {
+                    setDeletePending(true)
+                    try {
+                      if (await removeSession(deleting.id)) {
+                        setDeleting(null)
+                      } else {
+                        showToast({ key: 'sessionDeleteFailed', type: 'error' })
+                      }
+                    } finally {
+                      setDeletePending(false)
+                    }
+                  }}
+                >
+                  {t('delete')}
+                </Button>
+              </>
+            }
+          >
+            {t('deleteSessionWithFilesDescription')}
+          </Modal>
+        ) : null}
+      </div>
     </div>
   )
 }
 
-/** 移动端抽屉：浮在页面上方，点空白区域关闭。 */
+/** 移动端抽屉：浮在页面上方，点空白区域关闭；关闭时先滑出再卸载。 */
 export const MobileSider = () => {
   const open = useMobileSider((state) => state.open)
-  if (!open) {
+  const { mounted, closing } = usePresence(open, MOTION.base + 60)
+  if (!mounted) {
     return null
   }
   return (
     <>
-      <div className={styles.drawerMask} onClick={closeMobileSider} />
-      <div className={styles.drawer}>
+      <div
+        className={clsx(styles.drawerMask, closing && styles.closing)}
+        onClick={closeMobileSider}
+      />
+      <div className={clsx(styles.drawer, closing && styles.closing)}>
         <Sider mobile />
       </div>
     </>

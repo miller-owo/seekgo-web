@@ -1,6 +1,7 @@
 import clsx from 'clsx'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { MOTION, prefersReducedMotion } from '../../app/motion.js'
 import { useTranslate } from '../../i18n/index.js'
 import { IconCloseOutline16 } from './icons.js'
 import { IconButton } from './IconButton.js'
@@ -9,12 +10,13 @@ import styles from './Modal.module.css'
 /** 当前打开的弹窗，后打开的在末尾；叠放时 Esc 只关闭最上层 */
 const openModals: object[] = []
 
-/** 遮罩 + 居中卡片，Esc / 点遮罩关闭 */
+/** 遮罩 + 居中卡片，Esc / 点遮罩关闭；关闭时先播放退场动画再交给调用方卸载 */
 export const Modal = ({
   title,
   children,
   footer,
   closable = false,
+  dismissable = true,
   className,
   mainClassName,
   onClose,
@@ -24,6 +26,8 @@ export const Modal = ({
   footer?: ReactNode
   /** 标题栏右侧显示关闭按钮 */
   closable?: boolean
+  /** 为 false 时 Esc、遮罩与关闭按钮都不生效（例如正在提交的确认框） */
+  dismissable?: boolean
   className?: string
   /** 内容区的 class */
   mainClassName?: string
@@ -33,25 +37,51 @@ export const Modal = ({
   const titleId = useId()
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  // 退场期间先留在树里播放动画，结束后再调用 onClose 让调用方卸载
+  const [closing, setClosing] = useState(false)
+  const closingRef = useRef(false)
+  const timer = useRef(0)
+  const dismissableRef = useRef(dismissable)
+  dismissableRef.current = dismissable
+  const requestCloseRef = useRef(() => {})
+
+  requestCloseRef.current = () => {
+    if (!dismissableRef.current || closingRef.current) {
+      return
+    }
+    if (prefersReducedMotion()) {
+      onCloseRef.current()
+      return
+    }
+    closingRef.current = true
+    setClosing(true)
+    timer.current = window.setTimeout(() => onCloseRef.current(), MOTION.exit)
+  }
+
   useEffect(() => {
     const token = {}
     openModals.push(token)
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && openModals.at(-1) === token) {
-        onCloseRef.current()
+        requestCloseRef.current()
       }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
       openModals.splice(openModals.indexOf(token), 1)
       document.removeEventListener('keydown', onKeyDown)
+      window.clearTimeout(timer.current)
     }
   }, [])
 
   return createPortal(
     <div
-      className={styles.overlay}
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      className={clsx(styles.overlay, closing && styles.closing)}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          requestCloseRef.current()
+        }
+      }}
     >
       <div
         className={clsx(styles.content, className)}
@@ -69,7 +99,7 @@ export const Modal = ({
               tone="primary"
               icon={<IconCloseOutline16 />}
               aria-label={t('close')}
-              onClick={onClose}
+              onClick={() => requestCloseRef.current()}
             />
           ) : null}
         </div>
