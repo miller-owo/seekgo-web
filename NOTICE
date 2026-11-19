@@ -1,0 +1,86 @@
+SeekGo
+Copyright (c) 2026 SeekGo contributors
+
+This product includes software and features adapted from the following
+open-source projects. The original copyright notices and license texts are
+preserved in the `licenses/` directory and are distributed with the build.
+
+==============================================================================
+1. deepseek-ai/chat-demo - MIT License
+==============================================================================
+
+Copyright (c) 2026 DeepSeek
+
+The SeekGo user interface is derived from deepseek-ai/chat-demo.
+License text: licenses/chat-demo-LICENSE.txt
+Upstream: https://github.com/deepseek-ai/chat-demo
+
+==============================================================================
+2. dsh-image-gen - Apache License 2.0
+==============================================================================
+
+Copyright 2026 shanliuling
+
+SeekGo includes a functionally ported, simplified version of the image
+generation capability from dsh-image-gen: a multi-provider image tool
+(OpenAI, Google Gemini, Seedream, DashScope, xAI Grok, Zhipu GLM and
+OpenAI-compatible endpoints), per-user provider settings, and in-chat image
+rendering. The original DeepSeek Harness plugin (ComfyUI, subscription
+providers, canvas, gallery, prompt library and GIF editing) is not included.
+
+Original project: https://github.com/shanliuling/dsh-image-gen
+License text: licenses/dsh-image-gen-LICENSE.txt
+
+The Apache License 2.0 requires that recipients receive a copy of the
+License. A copy is distributed in licenses/dsh-image-gen-LICENSE.txt.
+
+==============================================================================
+3. billion-context - MIT License with Additional Attribution Term
+==============================================================================
+
+Copyright (c) 2026 ranxianglei
+
+SeekGo includes a functionally ported, simplified implementation of the
+long-context compression idea from billion-context: automatic summarization
+of older conversation rounds, summary-based context injection, and the
+ability to view or clear the compressed context. The original project is a
+local proxy that rewrites Anthropic/OpenAI streams and injects
+compress/decompress/search_context/acp_status tools; that proxy, acp-kernel,
+and its multi-client integrations are not included.
+
+Attribution (required by the Additional Term of the license):
+
+  This product uses a functional port of billion-context, a context
+  compression plugin by ranxianglei.
+  https://github.com/ranxianglei/billion-context
+
+Original project: https://github.com/ranxianglei/billion-context
+License text and Additional Term: licenses/billion-context-LICENSE.txt
+
+==============================================================================
+4. Logo attribution - CC BY-NC-SA 4.0
+==============================================================================
+
+The SeekGo logo is based on the whale-girl character, adapted and generated
+with GPT Image 2.5, and remains licensed under CC BY-NC-SA 4.0:
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+The following attribution is provided under the license's attribution
+requirement. The whale-girl design is adapted from character designs and
+fan-created material by these creators; the original copyright remains with
+them:
+
+- Bilibili ZipZipPipe: https://space.bilibili.com/4168597
+- Bilibili 上善无形: https://space.bilibili.com/4456176
+
+==============================================================================
+Third-party dependencies
+==============================================================================
+
+SeekGo also depends on third-party npm packages (React, zustand, KaTeX,
+Mermaid, Prism, fflate, idb, and others). Their licenses are available in
+each package's metadata under node_modules and are governed by their own
+terms.
+
+SeekGo is an independent project and is not affiliated with or endorsed by
+DeepSeek, shanliuling, or ranxianglei.

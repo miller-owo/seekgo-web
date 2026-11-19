@@ -1,7 +1,7 @@
 {
   "name": "seekgo-web",
   "version": "1.0.0",
-  "description": "SeekGo：基于 DeepSeek API 的 AI 对话应用，纯前端、可直接静态部署。",
+  "description": "An unofficial mod web client for DeepSeek.",
   "license": "MIT",
   "private": true,
   "type": "module",
