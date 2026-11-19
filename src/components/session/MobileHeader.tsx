@@ -1,7 +1,8 @@
-import { IconMenuOutline20, IconNewChatOutline20 } from '../base/icons.js'
+import { IconChartOutline16, IconMenuOutline20, IconNewChatOutline20 } from '../base/icons.js'
 import { useTranslate } from '../../i18n/index.js'
 import { newChat } from '../../services/chat/store.js'
 import { IconButton } from '../base/IconButton.js'
+import { toggleAnalysisPanel } from '../analysis/analysisPanelState.js'
 import { openMobileSider } from '../sider/mobileSiderState.js'
 import styles from './MobileHeader.module.css'
 
@@ -20,6 +21,13 @@ export const MobileHeader = ({ title }: { title?: string }) => {
       {title === undefined ? null : (
         <>
           <div className={styles.title}>{title}</div>
+          <IconButton
+            size="xl"
+            tone="primary"
+            icon={<IconChartOutline16 />}
+            aria-label={t('analysisPanel')}
+            onClick={toggleAnalysisPanel}
+          />
           <IconButton
             size="xl"
             tone="primary"

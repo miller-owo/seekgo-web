@@ -13,12 +13,14 @@ import {
   IconSearchOutline16,
   IconSearchWarningOutline16,
   IconThinkOutline16,
+  IconToolsOutline16,
 } from '../base/icons.js'
 import type { AssistantMessage } from '../../services/chat/types.js'
 import {
   getAreaTitle,
   isDeepSearchKind,
   isImageSearchKind,
+  type CustomToolStep,
   type FindStep,
   type OpenStep,
   type PageItem,
@@ -107,7 +109,9 @@ export const ReplyArea = memo(function ReplyArea({
 const stepKey = (step: Step, index: number) =>
   step.type === 'thinking' || step.type === 'text' || step.type === 'search'
     ? step.key
-    : `${step.type}-${index}`
+    : step.type === 'tool'
+      ? (step.calls[0]?.id ?? `tool-${index}`)
+      : `${step.type}-${index}`
 
 const StepItem = ({
   step,
@@ -158,6 +162,8 @@ const StepItem = ({
       return <FindRow step={step} isLast={isLast} />
     case 'read_link':
       return <ReadLinkRow step={step} isLast={isLast} />
+    case 'tool':
+      return <ToolCallRow step={step} isLast={isLast} />
     default:
       return null
   }
@@ -385,6 +391,38 @@ const ReadLinkRow = ({ step, isLast }: { step: ReadLinkStep; isLast: boolean }) 
       <span className={clsx(styles.intro, styles.shimmer)}>{t('readingLink')}</span>
       {step.links.map((link) => (
         <PageLink key={link.id} page={link} />
+      ))}
+    </ToolRow>
+  )
+}
+
+/** 自定义 HTTP 工具：列出一轮里调用的工具名，失败时可悬停查看接口返回的错误。 */
+const ToolCallRow = ({ step, isLast }: { step: CustomToolStep; isLast: boolean }) => {
+  const t = useTranslate()
+  const failed = step.calls.every((call) => call.status === 'failed')
+  return (
+    <ToolRow icon={<IconToolsOutline16 />} isLast={isLast}>
+      <span className={styles.intro}>{t(failed ? 'toolCallFailed' : 'toolCallIntro')}</span>
+      {step.calls.map((call) => (
+        <Tooltip
+          key={call.id}
+          content={call.error ? <span className={styles.toolError}>{call.error}</span> : null}
+        >
+          <span
+            className={clsx(
+              styles.chip,
+              styles.chipStatic,
+              call.status === 'failed' && styles.chipFailed
+            )}
+          >
+            {call.status === 'wip' ? null : (
+              <span className={styles.chipIcon}>
+                {call.status === 'failed' ? <IconCloseFill14 /> : <IconCheckedOutline14 />}
+              </span>
+            )}
+            <span className={styles.chipText}>{call.name}</span>
+          </span>
+        </Tooltip>
       ))}
     </ToolRow>
   )

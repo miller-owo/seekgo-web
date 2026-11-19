@@ -70,6 +70,15 @@
   overflow-y: auto;
 }
 
+/* 工具分组的说明，放在第一项之前 */
+.toolsHint {
+  flex-shrink: 0;
+  margin: 10px 0 2px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 /* 切换「通用设置 / 数据管理」时内容轻微推入 */
 .sectionEnter {
   animation: section-in var(--ds-motion-base) var(--ds-motion-ease-out);

@@ -2,8 +2,12 @@ import clsx from 'clsx'
 import { useIsMobile } from '../../app/viewport.js'
 import { useTranslate } from '../../i18n/index.js'
 import type { Session } from '../../services/chat/types.js'
+import { IconChartOutline16 } from '../base/icons.js'
+import { IconButton } from '../base/IconButton.js'
 import { ChatInput } from '../chatInput/ChatInput.js'
 import { MessageList } from '../messages/MessageList.js'
+import { toggleAnalysisPanel } from '../analysis/analysisPanelState.js'
+import { CompressionBanner } from './CompressionBanner.js'
 import { MobileHeader } from './MobileHeader.js'
 import styles from './SessionView.module.css'
 
@@ -29,8 +33,17 @@ export const SessionView = ({
           <div className={clsx(styles.title, siderCollapsed && styles.withCollapsedSider)}>
             {title}
           </div>
+          <div className={styles.headerActions}>
+            <IconButton
+              size="m"
+              icon={<IconChartOutline16 />}
+              tooltip={t('analysisPanel')}
+              onClick={toggleAnalysisPanel}
+            />
+          </div>
         </div>
       )}
+      <CompressionBanner session={session} />
       <MessageList
         key={session.id}
         session={session}

@@ -149,3 +149,54 @@
     --search-row-site-logo-color: var(--dsw-alias-interactive-bg-hover);
   }
 }
+
+/* 生图结果：自适应网格，点击在新窗口查看或下载 */
+.gallery {
+  margin-top: 10px;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  max-width: 680px;
+}
+
+.imageLink {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background-color: var(--dsw-alias-bg-skeleton);
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--ds-transition-duration) var(--ds-motion-ease-out);
+  }
+
+  &:hover img {
+    transform: scale(1.02);
+  }
+}
+
+.galleryCaption {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+@media not all and (min-width: 768px) {
+  .galleryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

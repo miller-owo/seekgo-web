@@ -58,6 +58,9 @@ export const AssistantMessage = memo(function AssistantMessage({
   const copyText = responseText || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
+  const generatedImages = view.images.flatMap((part) =>
+    part.images.map((image) => ({ image, prompt: part.prompt }))
+  )
   return (
     <div className={clsx(styles.message, enter && styles.enter)}>
       {refused ? null : (
@@ -77,6 +80,31 @@ export const AssistantMessage = memo(function AssistantMessage({
           disableLink={false}
           sources={view.sources}
         />
+      ) : null}
+      {!refused && generatedImages.length > 0 ? (
+        <div className={styles.gallery}>
+          <div className={styles.galleryGrid}>
+            {generatedImages.map(({ image, prompt }) => {
+              const ext = image.mimeType.split('/')[1] || 'png'
+              return (
+                <a
+                  key={image.id}
+                  className={styles.imageLink}
+                  href={image.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={t('generatedImageDownload')}
+                  {...(image.url.startsWith('data:')
+                    ? { download: `seekgo-image-${image.id}.${ext}` }
+                    : {})}
+                >
+                  <img src={image.url} alt={prompt || t('generatedImageAlt')} loading="lazy" />
+                </a>
+              )
+            })}
+          </div>
+          <div className={styles.galleryCaption}>{t('generatedImagesCaption')}</div>
+        </div>
       ) : null}
       {waiting ? (
         <div className={styles.waiting}>

@@ -6,6 +6,7 @@ declare const styles: {
   readonly "navItemActive": string;
   readonly "content": string;
   readonly "sectionEnter": string;
+  readonly "toolsHint": string;
   readonly "cell": string;
   readonly "row": string;
   readonly "text": string;

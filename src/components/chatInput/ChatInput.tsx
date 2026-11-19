@@ -53,6 +53,10 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const readLink = useSettings((state) => state.readLink)
+  // 阅读链接是智能搜索的前提；任一工具在设置里关闭时，输入框不再提供搜索入口。
+  const searchActive = search && readLink
+  const searchDisabled = !searchActive
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
@@ -214,12 +218,16 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('thinkingSwitch')}</span>
             </button>
           </Tooltip>
-          <Tooltip content={t('deactivatedSearchTooltip')}>
+          <Tooltip
+            content={t(searchDisabled ? 'searchToolsDisabledTooltip' : 'deactivatedSearchTooltip')}
+          >
             <button
               type="button"
-              className={clsx(styles.toggle, search && styles.selected)}
+              className={clsx(styles.toggle, searchActive && styles.selected)}
               aria-label={t('search')}
-              aria-pressed={search}
+              aria-pressed={searchActive}
+              disabled={searchDisabled}
+              title={searchDisabled ? t('searchToolsDisabledTooltip') : undefined}
               onClick={() => setSearch(!search)}
             >
               <IconGlobeLanguageOutline14 />

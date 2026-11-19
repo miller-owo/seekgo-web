@@ -5,8 +5,10 @@ import {
   IconDataOutline16,
   IconDownloadOutline16,
   IconFollowsystemOutline16,
+  IconInfoOutline16,
   IconLightOutline16,
   IconSettingsOutline16,
+  IconToolsOutline16,
   IconUploadOutline14,
 } from '../base/icons.js'
 import {
@@ -20,8 +22,11 @@ import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
+  setContextCompression,
   setLocale,
   setLocation,
+  setReadLink,
+  setSearch,
   setThemePreference,
   setTtsVoice,
   useSettings,
@@ -31,13 +36,18 @@ import { useTranslate, type TranslationKey, type TranslationMessage } from '../.
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
 import { Select } from '../base/Select.js'
+import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
+import { AboutSettings } from './AboutSettings.js'
+import { CustomToolsSection } from './CustomToolsSection.js'
+import { ImageGenerationSettings } from './ImageGenerationSettings.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
 import styles from './Settings.module.css'
 
 /**
- * 设置弹窗：分「通用设置」（主题、语言、朗读音色、位置）与「数据管理」（API Key、导入、导出、删除）。
+ * 设置弹窗：分「通用设置」（主题、语言、朗读音色、位置）、「工具配置」
+ * （服务端工具与自定义 HTTP 工具）与「数据管理」（API Key、导入、导出、删除）。
  * 桌面端为居中弹窗、左侧导航；移动端为底部弹层、导航横排在内容上方
  */
 export const SettingsDialog = () => {
@@ -51,7 +61,9 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     label: 'settingDialogAsideGeneralOptionLabel',
     icon: <IconSettingsOutline16 />,
   },
+  { value: 'tools', label: 'settingDialogAsideToolsOptionLabel', icon: <IconToolsOutline16 /> },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
+  { value: 'about', label: 'settingDialogAsideAboutOptionLabel', icon: <IconInfoOutline16 /> },
 ]
 
 const SettingsContent = () => {
@@ -101,7 +113,12 @@ const SettingsContent = () => {
               <LocaleSetting />
               <TtsVoiceSetting />
               <LocationSetting />
+              <CompressionSetting />
             </>
+          ) : section === 'tools' ? (
+            <ToolsSettings />
+          ) : section === 'about' ? (
+            <AboutSettings />
           ) : (
             <>
               <ApiKeyField editor={apiKeyEditor} />
@@ -310,6 +327,62 @@ const TtsVoiceSetting = () => {
             { value: 'tide', label: t('settingsTtsVoiceTide') },
           ]}
           onChange={setTtsVoice}
+        />
+      }
+    />
+  )
+}
+
+/**
+ * 工具配置：管理服务端工具开关与自定义 HTTP 工具。
+ * 阅读链接是智能搜索的前提，关闭阅读链接时搜索开关一起禁用。
+ */
+const ToolsSettings = () => {
+  const t = useTranslate()
+  const search = useSettings((state) => state.search)
+  const readLink = useSettings((state) => state.readLink)
+  return (
+    <>
+      <div className={styles.toolsHint}>{t('settingsToolsDescription')}</div>
+      <SettingCell
+        label={t('search')}
+        description={t(readLink ? 'settingsSearchDescription' : 'settingsSearchNeedsReadLink')}
+        status={null}
+        action={
+          <Switch
+            checked={search && readLink}
+            label={t('search')}
+            disabled={!readLink}
+            onChange={setSearch}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsReadLink')}
+        description={t('settingsReadLinkDescription')}
+        status={null}
+        action={<Switch checked={readLink} label={t('settingsReadLink')} onChange={setReadLink} />}
+      />
+      <ImageGenerationSettings />
+      <CustomToolsSection />
+    </>
+  )
+}
+
+/** 长上下文压缩：billion-context 的模型驱动折叠，默认关闭；上下文固定 1M。 */
+const CompressionSetting = () => {
+  const t = useTranslate()
+  const compression = useSettings((state) => state.contextCompression)
+  return (
+    <SettingCell
+      label={t('settingsContextCompression')}
+      description={t('settingsContextCompressionDescription')}
+      status={null}
+      action={
+        <Switch
+          checked={compression}
+          label={t('settingsContextCompression')}
+          onChange={setContextCompression}
         />
       }
     />

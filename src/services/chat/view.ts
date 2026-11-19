@@ -6,7 +6,7 @@ import type {
   WebSearchResult,
   WebSearchToolResultBlock,
 } from '../api/types.js'
-import type { AssistantMessage, ThinkingPart } from './types.js'
+import type { AssistantMessage, GeneratedImagePart, ThinkingPart, ToolResultPart } from './types.js'
 
 /**
  * 由回复的内容块推导界面需要的结构：思考与工具步骤的时间线、带引用角标的正文、可引用的来源列表。
@@ -61,15 +61,35 @@ export type FindStep = {
 
 export type ReadLinkStep = { type: 'read_link'; links: PageItem[] }
 
+/** 自定义 HTTP 工具调用；同名调用并行时合并到一组 */
+export type CustomToolCall = {
+  id: string
+  name: string
+  status: ToolStatus
+  /** 失败时交给模型看的错误文本，同时作为悬浮提示 */
+  error: string | null
+}
+
+export type CustomToolStep = { type: 'tool'; calls: CustomToolCall[] }
+
 export type ThinkingStep = { type: 'thinking'; key: string; blocks: ThinkingPart[] }
 
 /** 工具调用前输出的说明文字 */
 export type PreambleStep = { type: 'text'; key: string; markdown: string }
 
-export type Step = SearchStep | OpenStep | FindStep | ReadLinkStep | ThinkingStep | PreambleStep
+export type Step =
+  | SearchStep
+  | OpenStep
+  | FindStep
+  | ReadLinkStep
+  | CustomToolStep
+  | ThinkingStep
+  | PreambleStep
 
 export type ReplyView = {
   steps: Step[]
+  /** 内置生图工具产生的图片，按生成顺序展示在回答下方 */
+  images: GeneratedImagePart[]
   /** 最后一个思考或工具块之后的正文；markdown 里在引用处插入了 [citation:N] */
   answer: { markdown: string; text: string } | null
   /** 正文引用可指向的全部来源，按编号排列 */
@@ -175,14 +195,18 @@ const joinTextBlocks = (
 
 export const buildReplyView = (reply: AssistantMessage, streaming: boolean): ReplyView => {
   const results = new Map<string, WebSearchToolResultBlock | WebFetchToolResultBlock>()
+  const toolResults = new Map<string, ToolResultPart>()
   for (const block of reply.blocks) {
     if (block.type === 'web_search_tool_result' || block.type === 'web_fetch_tool_result') {
       results.set(block.tool_use_id, block)
+    } else if (block.type === 'tool_result') {
+      toolResults.set(block.tool_use_id, block)
     }
   }
 
   const registry = new SourceRegistry()
   const searchResults: Source[] = []
+  const images: GeneratedImagePart[] = []
   const steps: Step[] = []
   const mergedSearch = new Map<ServerToolKind, SearchStep>()
   let mergedThinking: ThinkingStep | null = null
@@ -228,6 +252,11 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
     if (block.type === 'text' && block.isTemplate) {
       return
     }
+    // 生图结果只用于展示，不参与工具时间线。
+    if (block.type === 'generated_image') {
+      images.push(block)
+      return
+    }
     if (block.type !== 'thinking') {
       mergedThinking = null
     }
@@ -243,6 +272,33 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
         flushPreamble()
         mergedThinking = { type: 'thinking', key: `thinking-${index}`, blocks: [block] }
         steps.push(mergedThinking)
+      }
+      return
+    }
+    if (block.type === 'tool_use' || block.type === 'tool_result') {
+      if (block.type === 'tool_result') {
+        return
+      }
+      flushPreamble()
+      const result = toolResults.get(block.id)
+      const status: ToolStatus = result
+        ? result.isError
+          ? 'failed'
+          : 'done'
+        : streaming
+          ? 'wip'
+          : 'failed'
+      const call: CustomToolCall = {
+        id: block.id,
+        name: block.name,
+        status,
+        error: result?.isError ? result.content : null,
+      }
+      const last = steps.at(-1)
+      if (last?.type === 'tool') {
+        last.calls.push(call)
+      } else {
+        steps.push({ type: 'tool', calls: [call] })
       }
       return
     }
@@ -340,6 +396,7 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
   const answer = pendingText.length > 0 ? joinTextBlocks(pendingText, registry) : null
   return {
     steps,
+    images,
     answer: answer && answer.text ? answer : null,
     sources: registry.list,
     searchResults,
@@ -395,6 +452,9 @@ export const getAreaTitle = (
   }
   if (last?.type === 'read_link' && last.links.some((link) => link.status === 'wip')) {
     return translate('readingLink')
+  }
+  if (last?.type === 'tool' && last.calls.some((call) => call.status === 'wip')) {
+    return translate('toolCalling')
   }
   return translate('messageThinking')
 }

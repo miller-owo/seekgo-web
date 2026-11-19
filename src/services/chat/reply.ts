@@ -5,6 +5,7 @@ import type {
   MessageStreamEvent,
   OutputBlockStart,
   TextBlockParam,
+  ToolResultBlockParam,
 } from '../api/types.js'
 import type {
   AssistantMessage,
@@ -12,8 +13,11 @@ import type {
   Message,
   ReplyBlock,
   ReplyStatus,
+  ToolResultPart,
+  ToolUsePart,
   UserMessage,
 } from './types.js'
+import { isCompressionTool } from './compression.js'
 
 /**
  * 文件按 Files API 的 file_id（附件的 serverId）引用：图片用 image 块，其余用 document 块。
@@ -46,8 +50,37 @@ const toReplyBlock = (block: OutputBlockStart, now: number): ReplyBlock | null =
     case 'web_search_tool_result':
     case 'web_fetch_tool_result':
       return block
+    case 'tool_use':
+      // 参数通常从空对象开始，随 input_json_delta 拼接，块结束时才解析。
+      return {
+        type: 'tool_use',
+        id: block.id,
+        name: block.name,
+        input: block.input ?? {},
+        partialJson: '',
+      }
     default:
       return null
+  }
+}
+
+/** 块结束时解析工具参数；失败时保留原文，执行阶段返回参数错误。 */
+const settleToolUse = (block: ToolUsePart): ToolUsePart => {
+  if (block.partialJson === undefined) {
+    return block
+  }
+  const raw = block.partialJson.trim()
+  if (!raw) {
+    const settled = { ...block }
+    delete settled.partialJson
+    return settled
+  }
+  try {
+    const settled: ToolUsePart = { ...block, input: JSON.parse(raw) }
+    delete settled.partialJson
+    return settled
+  } catch {
+    return block
   }
 }
 
@@ -84,11 +117,15 @@ export const applyEvent = (
       blockIndexes.delete(event.index)
       const block = toReplyBlock(event.content_block, now)
       if (!block) {
-        // 客户端工具内容不保存；未完成的工具往返也不能作为续写前缀。
-        return event.content_block.type === 'tool_use' ? { ...next, prefix: false } : next
+        return next
       }
       blockIndexes.set(event.index, next.blocks.length)
-      return { ...next, blocks: [...next.blocks, block] }
+      return {
+        ...next,
+        // 出现客户端工具调用后，本条回复不能再作为续写前缀。
+        prefix: block.type === 'tool_use' ? false : next.prefix,
+        blocks: [...next.blocks, block],
+      }
     }
     case 'content_block_delta': {
       const index = blockIndexes.get(event.index)
@@ -109,6 +146,9 @@ export const applyEvent = (
         if (block.type === 'text' && delta.type === 'citations_delta') {
           return { ...block, citations: [...(block.citations ?? []), delta.citation] }
         }
+        if (block.type === 'tool_use' && delta.type === 'input_json_delta') {
+          return { ...block, partialJson: (block.partialJson ?? '') + delta.partial_json }
+        }
         return block
       })
     }
@@ -118,11 +158,14 @@ export const applyEvent = (
         return next
       }
       blockIndexes.delete(event.index)
-      return updateBlock(next, index, (block) =>
-        block.type === 'thinking' && block.startedAt !== undefined && block.endedAt === undefined
-          ? { ...block, endedAt: now }
-          : block
-      )
+      return updateBlock(next, index, (block) => {
+        if (block.type === 'thinking') {
+          return block.startedAt !== undefined && block.endedAt === undefined
+            ? { ...block, endedAt: now }
+            : block
+        }
+        return block.type === 'tool_use' ? settleToolUse(block) : block
+      })
     }
     case 'message_delta':
       return {
@@ -179,14 +222,15 @@ export const canContinueReply = (reply: AssistantMessage): boolean => {
         block.type === 'server_tool_use' ||
         block.type === 'web_search_tool_result' ||
         block.type === 'web_fetch_tool_result' ||
+        block.type === 'tool_use' ||
+        block.type === 'tool_result' ||
         (block.type === 'text' && block.isTemplate)
     )
   ) {
     return false
   }
   return (
-    reply.status === 'stopped' ||
-    (reply.status === 'done' && reply.stopReason === 'max_tokens')
+    reply.status === 'stopped' || (reply.status === 'done' && reply.stopReason === 'max_tokens')
   )
 }
 
@@ -212,20 +256,48 @@ const toUserParam = ({ content, files }: UserMessage): MessageParam => {
       }
 }
 
+/** 客户端工具结果只能放在紧随 assistant 的 user 消息里。 */
+const toToolResultParam = ({
+  tool_use_id,
+  content,
+  isError,
+}: ToolResultPart): ToolResultBlockParam => ({
+  type: 'tool_result',
+  tool_use_id,
+  content,
+  ...(isError ? { is_error: true } : {}),
+})
+
 /**
- * assistant 的内容块按历史与续写场景转换：
+ * assistant 的内容块按历史与续写场景转换；一条本地回复可能拆成多条 API 消息：
  * - 历史思考及其签名不回传；开启思考时续写只保留本轮非空白思考及其签名；
  * - 文本块去掉 citations（服务端忽略）。相邻文本直接拼接，被思考或工具隔开的文本用空行连接；
- *   省略历史思考后仍保留其前后正文的空行；
- * - 工具调用和结果只保留 kind 为 read_link 的块，其他历史工具块不回传；
- * - 阅读链接结果原样回传，保留 signature：服务端解密后将页面拼回该轮提问末尾；
+ * - 服务端工具调用和结果只保留 kind 为 read_link 的块，阅读链接结果保留 signature；
+ * - 客户端工具调用按协议回放：调用之后紧跟对应的 tool_result，再继续后续正文；
+ *   调用或结果不完整（流中断、参数不是合法 JSON）时两者都不回传。
  */
-const toAssistantParam = (
+const toAssistantMessages = (
   { blocks }: AssistantMessage,
   prefix = false,
   thinking = false
-): Extract<MessageParam, { role: 'assistant' }> => {
-  const content: AssistantBlockParam[] = []
+): MessageParam[] => {
+  const results = new Map<string, ToolResultPart>()
+  for (const block of blocks) {
+    if (block.type === 'tool_result') {
+      results.set(block.tool_use_id, block)
+    }
+  }
+  /** 调用与结果都完整、参数已解析的客户端工具才有资格回放 */
+  const replayableCalls = new Set(
+    blocks.flatMap((block) =>
+      block.type === 'tool_use' &&
+      !isCompressionTool(block.name) &&
+      block.partialJson === undefined &&
+      results.has(block.id)
+        ? [block.id]
+        : []
+    )
+  )
   // 成功阅读的网页靠签名恢复正文；缺少有效签名时，调用与结果都不回传。
   const unsignedReadLinks = new Set(
     blocks.flatMap((block) =>
@@ -237,9 +309,40 @@ const toAssistantParam = (
         : []
     )
   )
+  const messages: MessageParam[] = []
+  let content: AssistantBlockParam[] = []
+  let pendingResults: ToolResultBlockParam[] = []
   /** 正在拼接的文本块；遇到任何非文本块（含不回传的思考块）就结束 */
   let text: TextBlockParam | null = null
+
+  const flush = () => {
+    if (content.length > 0) {
+      messages.push({ role: 'assistant', content })
+    }
+    if (pendingResults.length > 0) {
+      messages.push({ role: 'user', content: pendingResults })
+    }
+    content = []
+    pendingResults = []
+    text = null
+  }
+
   for (const block of blocks) {
+    if (block.type === 'tool_result') {
+      // 压缩工具调用不回放；摘要已经通过系统提示单独提供。
+      if (replayableCalls.has(block.tool_use_id)) {
+        pendingResults.push(toToolResultParam(block))
+      }
+      continue
+    }
+    // 工具结果之后的内容属于下一轮 assistant 消息。
+    if (pendingResults.length > 0) {
+      flush()
+    }
+    if (block.type === 'tool_use' && isCompressionTool(block.name)) {
+      text = null
+      continue
+    }
     // 空思考不改变续写位置，也不应把两段正文隔开，导致后端额外插入空行。
     if (prefix && block.type === 'thinking' && !block.thinking.trim()) {
       continue
@@ -260,8 +363,13 @@ const toAssistantParam = (
     text = null
     if (prefix && thinking && block.type === 'thinking') {
       // 续写保留本轮思考，历史轮次的思考省略。
-      const { type, thinking, signature } = block
-      content.push({ type, thinking, signature: signature ?? '' })
+      const { type, thinking: thought, signature } = block
+      content.push({ type, thinking: thought, signature: signature ?? '' })
+    } else if (block.type === 'tool_use') {
+      if (!replayableCalls.has(block.id)) {
+        continue
+      }
+      content.push({ type: 'tool_use', id: block.id, name: block.name, input: block.input })
     } else if (
       block.type === 'server_tool_use' &&
       block.kind === 'read_link' &&
@@ -277,11 +385,61 @@ const toAssistantParam = (
       content.push(block)
     }
   }
+  flush()
+  return messages
+}
+
+/**
+ * 工具调用回合的 assistant 内容：按协议回传本轮完整内容（思考及其签名、接口调用、
+ * 服务端工具块与正文），不能套用历史回放的过滤规则。
+ */
+export const toToolCallAssistant = (
+  blocks: ReplyBlock[]
+): Extract<MessageParam, { role: 'assistant' }> => {
+  const content: AssistantBlockParam[] = []
+  let text: TextBlockParam | null = null
+  for (const block of blocks) {
+    if (block.type === 'tool_result') {
+      continue
+    }
+    if (block.type === 'text') {
+      if (text) {
+        text.text += block.text
+      } else {
+        const previous = content.at(-1)
+        text = {
+          type: 'text',
+          text: `${previous?.type === 'text' ? '\n\n' : ''}${block.text}`,
+        }
+        content.push(text)
+      }
+      continue
+    }
+    text = null
+    if (block.type === 'thinking') {
+      const { type, thinking, signature } = block
+      content.push({ type, thinking, signature: signature ?? '' })
+    } else if (block.type === 'tool_use') {
+      // 参数不是合法 JSON 时 input 仍是空对象；错误结果会紧随其后回传，保证调用与结果成对。
+      content.push({ type: 'tool_use', id: block.id, name: block.name, input: block.input })
+    } else if (block.type === 'server_tool_use') {
+      const { type, id, name, input, kind } = block
+      content.push({ type, id, name, input, kind })
+    } else if (block.type === 'web_search_tool_result' || block.type === 'web_fetch_tool_result') {
+      content.push(block)
+    }
+  }
   return {
     role: 'assistant',
     content: content.filter((block) => block.type !== 'text' || block.text !== ''),
   }
 }
+
+/** 工具结果按调用顺序放在一条 user 消息里，先于任何文本。 */
+export const toToolResultsMessage = (results: ToolResultPart[]): MessageParam => ({
+  role: 'user',
+  content: results.map(toToolResultParam),
+})
 
 /** 历史中会进入请求上下文的轮次：提问后紧跟可用回答的才保留 */
 export const getContextRounds = (history: Message[]): [UserMessage, AssistantMessage][] => {
@@ -322,14 +480,15 @@ export const toRequestMessages = (
       continue
     }
     appendReminder(reply.latestReminder)
-    messages.push(toUserParam(user), toAssistantParam(reply))
+    messages.push(toUserParam(user), ...toAssistantMessages(reply))
   }
   appendReminder(latestReminder)
   messages.push(toUserParam(question))
   if (prefix?.prefix) {
-    const assistant = toAssistantParam(prefix, true, thinking)
+    const assistant = toAssistantMessages(prefix, true, thinking).at(-1)
     // 没有非空白正文或有效思考时直接重发原问题，避免服务端拒绝空 Prefill。
     if (
+      assistant?.role === 'assistant' &&
       assistant.content.some(
         (block) =>
           (block.type === 'text' && block.text.trim()) ||

@@ -299,6 +299,20 @@
   cursor: not-allowed;
 }
 
+/* 自定义工具标签只用于展示，不响应点击 */
+.chipStatic {
+  cursor: default;
+}
+
+.toolError {
+  display: block;
+  max-height: 180px;
+  max-width: 300px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .chipIcon {
   display: flex;
   margin-right: 2px;

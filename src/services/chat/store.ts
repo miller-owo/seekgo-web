@@ -1,12 +1,27 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
+import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
-import type { ChatModel, CreateMessageRequest } from '../api/types.js'
+import type { ChatModel, ClientTool, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
+import { enabledCustomTools, getCustomTool } from '../customTools.js'
+import { generateImages, IMAGE_TOOL, IMAGE_TOOL_NAME, imageToolAvailable } from '../imageGen.js'
 import { useSettings } from '../settings.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
+import {
+  applyCompressInput,
+  applyDecompressInput,
+  buildCompressionStatus,
+  buildCompressionSystemPrompt,
+  clearCompression,
+  COMPRESSION_TOOLS,
+  filterCompressedHistory,
+  isCompressionTool,
+  restoreCompressionBlock,
+  searchCompressedContext,
+} from './compression.js'
 import {
   clearAllDrafts,
   clearDraft,
@@ -14,6 +29,7 @@ import {
   getDraft,
   prepareDraftMessage,
 } from './drafts.js'
+import { runCustomTool } from './httpTool.js'
 import { createLatestReminder } from './latestReminder.js'
 import {
   applyEvent,
@@ -21,14 +37,19 @@ import {
   getContextRounds,
   settleReply,
   toRequestMessages,
+  toToolCallAssistant,
+  toToolResultsMessage,
 } from './reply.js'
 import {
   toSessionSummary,
   type AssistantMessage,
   type FileAttachment,
   type Message,
+  type ReplyBlock,
   type Session,
   type SessionSummary,
+  type ToolResultPart,
+  type ToolUsePart,
   type UserMessage,
 } from './types.js'
 
@@ -44,16 +65,163 @@ const SAFETY_CHECK = { level: 'high' } as const
 const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
 const FILE_RETRY_BASE_DELAY = 1000
+/** 一次回答里最多允许多少轮自定义工具调用，防止模型反复调用 */
+const TOOL_ROUND_LIMIT = 8
 
-/** 阅读链接始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。 */
-const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
-  const tools: CreateMessageRequest['tools'] = [
-    { type: 'deepseek_read_url', name: 'deepseek_read_url' },
-  ]
-  if (search) {
+/** 阅读链接是智能搜索的前提：关闭阅读链接时不声明搜索工具（含边想边搜）。 */
+const serverTools = (
+  search: boolean,
+  readLink: boolean
+): NonNullable<CreateMessageRequest['tools']> => {
+  const tools: NonNullable<CreateMessageRequest['tools']> = []
+  if (readLink) {
+    tools.push({ type: 'deepseek_read_url', name: 'deepseek_read_url' })
+  }
+  if (search && readLink) {
     tools.push({ type: 'deepseek_web_search', name: 'deepseek_web_search' })
   }
   return tools
+}
+
+/** 启用的自定义工具按 Anthropic 客户端工具格式声明：不带 type，input_schema 顶层为 object。 */
+const customToolDeclarations = (): ClientTool[] =>
+  enabledCustomTools().map(({ name, description, inputSchema }) => ({
+    name,
+    description,
+    input_schema: inputSchema,
+  }))
+
+/** 请求里的全部工具：服务端、上下文压缩、生图、自定义；都为空时不传 tools。 */
+const requestTools = (search: boolean, readLink: boolean) => [
+  ...serverTools(search, readLink),
+  ...(useSettings.getState().contextCompression ? COMPRESSION_TOOLS : []),
+  ...(imageToolAvailable() ? [IMAGE_TOOL] : []),
+  ...customToolDeclarations(),
+]
+
+type ToolCallOutcome = { result: ToolResultPart; blocks: ReplyBlock[] }
+type ToolCallContext = { sessionId: string; history: Message[] }
+
+const toolPrompt = (input: unknown) => {
+  if (typeof input === 'object' && input !== null && 'prompt' in input) {
+    const prompt = (input as { prompt?: unknown }).prompt
+    return typeof prompt === 'string' ? prompt.trim() : ''
+  }
+  return ''
+}
+
+const textOutcome = (call: ToolUsePart, content: string, isError = false): ToolCallOutcome => ({
+  result: { type: 'tool_result', tool_use_id: call.id, content, isError },
+  blocks: [],
+})
+
+/** 生图 / 自定义 HTTP 工具：可以并发，不修改会话结构。 */
+const runExternalTool = async (
+  call: ToolUsePart,
+  signal: AbortSignal
+): Promise<ToolCallOutcome> => {
+  if (call.partialJson?.trim()) {
+    return textOutcome(call, translate('toolInputInvalid'), true)
+  }
+  if (call.name === IMAGE_TOOL_NAME) {
+    const output = await generateImages(call.input, signal)
+    return {
+      result: {
+        type: 'tool_result',
+        tool_use_id: call.id,
+        content: output.content,
+        isError: output.isError,
+      },
+      blocks:
+        output.images.length > 0
+          ? [
+              {
+                type: 'generated_image',
+                id: call.id,
+                prompt: toolPrompt(call.input),
+                images: output.images,
+              },
+            ]
+          : [],
+    }
+  }
+  const tool = getCustomTool(call.name)
+  if (!tool) {
+    return textOutcome(call, translate('toolNotFound', { name: call.name }), true)
+  }
+  const result = await runCustomTool(tool, call.input, signal)
+  return textOutcome(call, result.content, result.isError)
+}
+
+/** 压缩工具：串行执行，保证同一批里的 compress/decompress/status 看到前一步结果。 */
+const runCompressionTool = async (
+  call: ToolUsePart,
+  context: ToolCallContext
+): Promise<ToolCallOutcome> => {
+  if (call.partialJson?.trim()) {
+    return textOutcome(call, translate('toolInputInvalid'), true)
+  }
+  const session = getSession(context.sessionId)
+  if (!session) {
+    return textOutcome(call, 'Session not found.', true)
+  }
+  if (call.name === 'acp_status') {
+    return textOutcome(call, buildCompressionStatus(session, context.history))
+  }
+  if (call.name === 'search_context') {
+    return textOutcome(call, searchCompressedContext(session, context.history, call.input))
+  }
+  if (call.name === 'compress') {
+    const update = applyCompressInput(session, context.history, call.input)
+    if (!update.ok) {
+      return textOutcome(call, update.message, true)
+    }
+    updateSession(context.sessionId, () => update.session)
+    persist(context.sessionId)
+    return textOutcome(call, update.message)
+  }
+  const update = applyDecompressInput(session, call.input)
+  if (!update.ok) {
+    return textOutcome(call, update.message, true)
+  }
+  updateSession(context.sessionId, () => update.session)
+  persist(context.sessionId)
+  return textOutcome(call, update.message)
+}
+
+/**
+ * 执行一轮客户端工具调用；外部工具并发，压缩工具串行。
+ * 结果按原调用顺序返回，满足协议里 tool_result 与 tool_use 一一对应的要求。
+ */
+const runToolCalls = async (
+  calls: ToolUsePart[],
+  signal: AbortSignal,
+  context: ToolCallContext
+): Promise<{ results: ToolResultPart[]; blocks: ReplyBlock[] }> => {
+  const outcomes: (ToolCallOutcome | undefined)[] = new Array(calls.length)
+  const external: Promise<void>[] = []
+  calls.forEach((call, index) => {
+    if (isCompressionTool(call.name)) {
+      return
+    }
+    external.push(
+      runExternalTool(call, signal).then((outcome) => {
+        outcomes[index] = outcome
+      })
+    )
+  })
+  for (let index = 0; index < calls.length; index++) {
+    const call = calls[index]
+    if (isCompressionTool(call.name)) {
+      outcomes[index] = await runCompressionTool(call, context)
+    }
+  }
+  await Promise.all(external)
+  const completed = outcomes.filter((outcome): outcome is ToolCallOutcome => outcome !== undefined)
+  return {
+    results: completed.map((outcome) => outcome.result),
+    blocks: completed.flatMap((outcome) => outcome.blocks),
+  }
 }
 
 /** 允许自动补标题的请求；手动重命名后取消本轮标题写入，包含主动清空标题的情况。 */
@@ -253,16 +421,17 @@ export const bindChatPersistence = () => {
   }
 }
 
-/** 按当前开关创建回复：深度思考对应 thinking，智能搜索控制 deepseek_web_search。 */
+/** 按当前开关创建回复：阅读链接是搜索的前提，任一项关闭都按搜索关闭记录。 */
 const createReply = (): AssistantMessage => {
-  const { thinking, search } = useSettings.getState()
+  const { thinking, search, readLink } = useSettings.getState()
   return {
     id: createId(),
     role: 'assistant',
     createdAt: Date.now(),
     model: MODEL,
     thinking,
-    search,
+    search: search && readLink,
+    readLink,
     prefix: true,
     status: 'pending',
     blocks: [],
@@ -487,6 +656,30 @@ export const removeSession = (id: string): Promise<boolean> => {
   return task
 }
 
+/** 从界面恢复一个压缩块到原文；原文一直保存在会话里。 */
+export const restoreSessionCompression = (sessionId: string, blockId: string) => {
+  const session = getSession(sessionId)
+  if (!session) {
+    return
+  }
+  const next = restoreCompressionBlock(session, blockId)
+  if (next === session) {
+    return
+  }
+  updateSession(sessionId, () => next)
+  persist(sessionId)
+}
+
+/** 清除当前会话的全部折叠块，恢复完整上下文。 */
+export const clearSessionCompressions = (sessionId: string) => {
+  const session = getSession(sessionId)
+  if (!session?.compressions?.length) {
+    return
+  }
+  updateSession(sessionId, (current) => clearCompression(current))
+  persist(sessionId)
+}
+
 const removeSessionData = async (id: string): Promise<boolean> => {
   if (get().importingHistory || deletingSessions.has(id)) {
     return false
@@ -705,13 +898,14 @@ export const continueReply = (sessionId: string, messageId: string) => {
   ) {
     return
   }
-  const { thinking, search } = useSettings.getState()
+  const { thinking, search, readLink } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
     // 未记录请求配置的回复，续写时使用默认模型和当前开关。
     model: previous.model ?? MODEL,
     thinking: previous.thinking ?? thinking,
-    search: previous.search ?? search,
+    search: previous.search ?? (search && readLink),
+    readLink: previous.readLink ?? readLink,
     status: 'pending',
     stopReason: undefined,
     stopDetails: undefined,
@@ -989,49 +1183,110 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         reply = { ...reply, latestReminder }
         updateReply(sessionId, reply)
         persist(sessionId)
-        const messages = toRequestMessages(
-          prepared.history,
+        const compressionEnabled = useSettings.getState().contextCompression
+        const contextSession = compressionEnabled ? getSession(sessionId) : undefined
+        // 压缩后的请求只带未被折叠的原文；摘要通过 system 注入，原文始终留在本地。
+        const contextHistory = contextSession
+          ? filterCompressedHistory(contextSession, prepared.history)
+          : prepared.history
+        const system =
+          contextSession !== undefined
+            ? `${SYSTEM_PROMPT}\n\n${buildCompressionSystemPrompt(
+                contextSession,
+                prepared.history
+              )}`
+            : SYSTEM_PROMPT
+        let messages = toRequestMessages(
+          contextHistory,
           prepared.question,
           prepared.prefix,
           initial.thinking ?? false,
           latestReminder
         )
-        const events = streamMessage(
-          useSettings.getState().apiKey ?? '',
-          {
-            model: initial.model ?? MODEL,
-            system: SYSTEM_PROMPT,
-            messages,
-            thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
-            safety_check: SAFETY_CHECK,
-            tools: serverTools(initial.search ?? false),
-            ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
-          },
-          controller.signal
+        const tools = requestTools(
+          initial.search ?? false,
+          // 旧回复或导入回复没有阅读链接快照时，按当前设置判断搜索是否可用。
+          initial.readLink ?? useSettings.getState().readLink
         )
-        const blockIndexes = new Map<number, number>()
-        for await (const event of events) {
-          receivedContent ||= event.type === 'content_block_start'
-          if (
-            event.type === 'message_delta' &&
-            (event.delta.stop_reason === 'end_turn' || event.delta.stop_reason === 'max_tokens') &&
-            event.delta.title?.trim() &&
-            titleRequests.has(controller) &&
-            !controller.signal.aborted &&
-            !get().importingHistory
-          ) {
-            const title = event.delta.title.trim()
-            updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))
-            titleRequests.delete(controller)
+        let toolRounds = 0
+        while (true) {
+          const roundStart = reply.blocks.length
+          // 每一轮都是独立请求；清掉上一轮的结束原因，避免断流时误判为已完成。
+          reply = { ...reply, stopReason: undefined, stopDetails: undefined }
+          const events = streamMessage(
+            useSettings.getState().apiKey ?? '',
+            {
+              model: initial.model ?? MODEL,
+              system,
+              messages,
+              thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
+              safety_check: SAFETY_CHECK,
+              ...(tools.length > 0 ? { tools } : {}),
+              ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+            },
+            controller.signal
+          )
+          const blockIndexes = new Map<number, number>()
+          for await (const event of events) {
+            receivedContent ||= event.type === 'content_block_start'
+            if (
+              event.type === 'message_delta' &&
+              (event.delta.stop_reason === 'end_turn' ||
+                event.delta.stop_reason === 'max_tokens') &&
+              event.delta.title?.trim() &&
+              titleRequests.has(controller) &&
+              !controller.signal.aborted &&
+              !get().importingHistory
+            ) {
+              const title = event.delta.title.trim()
+              updateSession(sessionId, (session) =>
+                session.title ? session : { ...session, title }
+              )
+              titleRequests.delete(controller)
+            }
+            reply = applyEvent(reply, event, Date.now(), blockIndexes)
+            if (document.visibilityState === 'hidden') {
+              flush()
+            } else {
+              frame ||= requestAnimationFrame(flush)
+            }
           }
-          reply = applyEvent(reply, event, Date.now(), blockIndexes)
-          if (document.visibilityState === 'hidden') {
-            flush()
-          } else {
-            frame ||= requestAnimationFrame(flush)
+          const roundBlocks = reply.blocks.slice(roundStart)
+          const calls = roundBlocks.filter(
+            (block): block is ToolUsePart => block.type === 'tool_use'
+          )
+          if (calls.length === 0 || reply.stopReason === 'refusal') {
+            reply = settleReply(reply, 'done', Date.now())
+            break
           }
+          if (controller.signal.aborted) {
+            reply = settleReply(reply, 'stopped', Date.now())
+            break
+          }
+          if (toolRounds >= TOOL_ROUND_LIMIT) {
+            reply = settleReply(reply, 'error', Date.now(), {
+              kind: 'protocol',
+              message: '',
+              localMessage: { key: 'toolRoundsExceeded' },
+            })
+            break
+          }
+          toolRounds += 1
+          const { results, blocks: generatedBlocks } = await runToolCalls(
+            calls,
+            controller.signal,
+            { sessionId, history: prepared.history }
+          )
+          reply = { ...reply, blocks: [...reply.blocks, ...results, ...generatedBlocks] }
+          updateReply(sessionId, reply)
+          persist(sessionId)
+          if (controller.signal.aborted) {
+            reply = settleReply(reply, 'stopped', Date.now())
+            break
+          }
+          // 下一轮请求带上本轮完整 assistant 内容与工具结果；结果必须紧跟在调用之后。
+          messages = [...messages, toToolCallAssistant(roundBlocks), toToolResultsMessage(results)]
         }
-        reply = settleReply(reply, 'done', Date.now())
         break
       } catch (error) {
         if (controller.signal.aborted) {

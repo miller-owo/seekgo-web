@@ -7,7 +7,7 @@ export type Locale = 'zh-CN' | 'en-US'
 /** 主题偏好；默认跟随系统 */
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、侧边栏收起状态 */
+/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、工具开关、侧边栏收起状态 */
 type Settings = {
   apiKey: string | null
   locale: Locale
@@ -16,6 +16,10 @@ type Settings = {
   ttsVoice: TtsVoice
   thinking: boolean
   search: boolean
+  /** 阅读用户消息中的链接；默认开启，保持升级前的行为 */
+  readLink: boolean
+  /** 启用模型驱动的长上下文压缩（billion-context 功能级移植） */
+  contextCompression: boolean
   siderCollapsed: boolean
 }
 
@@ -27,6 +31,8 @@ const KEYS = {
   ttsVoice: 'seekgo:tts-voice',
   thinking: 'seekgo:thinking',
   search: 'seekgo:search',
+  readLink: 'seekgo:read-link',
+  contextCompression: 'seekgo:context-compression',
   siderCollapsed: 'seekgo:sider-collapsed',
 } as const
 
@@ -114,6 +120,8 @@ export const useSettings = create<Settings>(() => ({
   ttsVoice: initialTtsVoice(),
   thinking: read(KEYS.thinking) === 'true',
   search: read(KEYS.search) === 'true',
+  readLink: read(KEYS.readLink) !== 'false',
+  contextCompression: read(KEYS.contextCompression) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
 
@@ -151,6 +159,16 @@ export const setThinking = (thinking: boolean) => {
 export const setSearch = (search: boolean) => {
   write(KEYS.search, String(search))
   useSettings.setState({ search })
+}
+
+export const setReadLink = (readLink: boolean) => {
+  write(KEYS.readLink, String(readLink))
+  useSettings.setState({ readLink })
+}
+
+export const setContextCompression = (contextCompression: boolean) => {
+  write(KEYS.contextCompression, String(contextCompression))
+  useSettings.setState({ contextCompression })
 }
 
 export const setSiderCollapsed = (siderCollapsed: boolean) => {

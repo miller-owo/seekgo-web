@@ -142,6 +142,15 @@ const assistantFragments = (message: AssistantMessage): Fragment[] => {
       response.content += usedWeb ? block.text.replace(/\[citation:\d+\]/g, '') : block.text
       continue
     }
+    // 自定义工具与生图结果不写入归档，但仍作为正文字段的边界。
+    if (
+      block.type === 'tool_use' ||
+      block.type === 'tool_result' ||
+      block.type === 'generated_image'
+    ) {
+      response = undefined
+      continue
+    }
     const converted: Fragment[] =
       block.type === 'thinking'
         ? block.thinking

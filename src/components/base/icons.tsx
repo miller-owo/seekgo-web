@@ -254,6 +254,82 @@ export const IconSettingsOutline16 = () => (
   </svg>
 )
 
+/** 分析面板：柱状图 */
+/** 分析面板：带趋势线的数据面板 */
+export const IconChartOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="1.9"
+      y="2.1"
+      width="12.2"
+      height="11.8"
+      rx="2.4"
+      stroke="currentColor"
+      strokeWidth="1.3"
+    />
+    <path
+      d="M4.2 10.6 6.5 7.9l2.1 1.6 3.1-3.7"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="4.2" cy="10.6" r="0.8" fill="currentColor" />
+    <circle cx="11.7" cy="5.8" r="0.8" fill="currentColor" />
+  </svg>
+)
+
+/** 长上下文压缩：叠层 */
+export const IconLayersOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M8 1.4 14.6 4.7 8 8 1.4 4.7 8 1.4Zm0 1.6L4.6 4.7 8 6.4l3.4-1.7L8 3Z"
+      fill="currentColor"
+    />
+    <path d="m1.6 7.4 6.4 3.2 6.4-3.2.8 1.5L8 12.5 1.8 8.9l-.2-1.5Z" fill="currentColor" />
+    <path d="m1.6 10.4 6.4 3.2 6.4-3.2.8 1.5L8 15.5 1.8 11.9l-.2-1.5Z" fill="currentColor" />
+  </svg>
+)
+
+/** 关于：圆圈内一个 i */
+export const IconInfoOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M8 1.3a6.7 6.7 0 1 0 0 13.4A6.7 6.7 0 0 0 8 1.3Zm0 1.4a5.3 5.3 0 1 1 0 10.6A5.3 5.3 0 0 1 8 2.7Z"
+      fill="currentColor"
+    />
+    <circle cx="8" cy="5" r="1" fill="currentColor" />
+    <rect x="7.25" y="7" width="1.5" height="4.2" rx="0.75" fill="currentColor" />
+  </svg>
+)
+
+/** 新增：加号 */
+export const IconAddOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M7.25 1.7H8.75V7.25H14.3V8.75H8.75V14.3H7.25V8.75H1.7V7.25H7.25V1.7Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
+/** 工具配置：三条滑杆，与通用设置的齿轮区分 */
+export const IconToolsOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1.7" y="3.35" width="1.9" height="1.3" rx="0.65" fill="currentColor" />
+    <rect x="7.2" y="3.35" width="7.1" height="1.3" rx="0.65" fill="currentColor" />
+    <circle cx="5.4" cy="4" r="1.55" fill="currentColor" />
+    <rect x="1.7" y="7.35" width="7.1" height="1.3" rx="0.65" fill="currentColor" />
+    <rect x="12.4" y="7.35" width="1.9" height="1.3" rx="0.65" fill="currentColor" />
+    <circle cx="10.6" cy="8" r="1.55" fill="currentColor" />
+    <rect x="1.7" y="11.35" width="3.5" height="1.3" rx="0.65" fill="currentColor" />
+    <rect x="8.8" y="11.35" width="5.5" height="1.3" rx="0.65" fill="currentColor" />
+    <circle cx="7" cy="12" r="1.55" fill="currentColor" />
+  </svg>
+)
+
 export const IconStopFill16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
