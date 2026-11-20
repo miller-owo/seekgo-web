@@ -32,6 +32,7 @@ Most AI chat clients need a server to hold API keys, proxy requests, or store co
 - Multiple conversations with automatic titles, rename, and delete.
 - Streaming replies, deep thinking, stop, continue, edit, regenerate, and message branches.
 - Upload, paste, and drag-and-drop attachments; voice input and read-aloud replies.
+- Click an attachment or a generated image to open the full-screen photo viewer: zoom, pan, download, and switch between images with the keyboard or swipe.
 - Markdown, syntax highlighting, KaTeX math, and Mermaid diagrams.
 
 ### Search and tools
@@ -317,6 +318,8 @@ SeekGo also includes functional ports of:
 
 See [NOTICE](NOTICE) and [`licenses/`](licenses/) for the full attributions and license texts. The production build copies `LICENSE`, `NOTICE`, and `licenses/` into `dist/`; keep them when redistributing the app. Third-party dependencies remain under their own licenses.
 
+The photo viewer is built on [yet-another-react-lightbox](https://github.com/igordanchenko/yet-another-react-lightbox) (MIT); its license text ships in `licenses/yet-another-react-lightbox-LICENSE.txt`.
+
 The SeekGo logo is based on the whale-girl character, was adapted and generated with GPT Image 2.5, and remains under the original [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) license. The MIT license above covers the source code, not the logo.
 
 ### Logo character attribution (CC BY-NC-SA 4.0)
@@ -331,4 +334,5 @@ The following attribution is provided under the CC BY-NC-SA 4.0 license. The wha
 - [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo) for the original interface.
 - [shanliuling/dsh-image-gen](https://github.com/shanliuling/dsh-image-gen) for the image-generation design and provider model.
 - [ranxianglei/billion-context](https://github.com/ranxianglei/billion-context) for the model-driven context-compression and analysis-panel approach.
+- [yet-another-react-lightbox](https://github.com/igordanchenko/yet-another-react-lightbox) for the MIT-licensed photo viewer.
 - The React, rspack, KaTeX, Mermaid, Prism, and idb communities.

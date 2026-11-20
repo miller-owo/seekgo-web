@@ -11,6 +11,7 @@ import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
 import { Markdown } from '../markdown/Markdown.js'
+import { openPhotoView } from '../photoView/photoViewState.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
 import { ReadAloudButton } from './ReadAloudButton.js'
@@ -61,6 +62,16 @@ export const AssistantMessage = memo(function AssistantMessage({
   const generatedImages = view.images.flatMap((part) =>
     part.images.map((image) => ({ image, prompt: part.prompt }))
   )
+  // 一组生图在查看器里可以左右切换
+  const openGeneratedImage = (index: number) =>
+    openPhotoView(
+      generatedImages.map(({ image, prompt }) => ({
+        src: image.url,
+        alt: prompt || t('generatedImageAlt'),
+        filename: `seekgo-image-${image.id}.${image.mimeType.split('/')[1] || 'png'}`,
+      })),
+      index
+    )
   return (
     <div className={clsx(styles.message, enter && styles.enter)}>
       {refused ? null : (
@@ -84,22 +95,18 @@ export const AssistantMessage = memo(function AssistantMessage({
       {!refused && generatedImages.length > 0 ? (
         <div className={styles.gallery}>
           <div className={styles.galleryGrid}>
-            {generatedImages.map(({ image, prompt }) => {
-              const ext = image.mimeType.split('/')[1] || 'png'
+            {generatedImages.map(({ image, prompt }, index) => {
               return (
-                <a
+                <button
                   key={image.id}
+                  type="button"
                   className={styles.imageLink}
-                  href={image.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={t('generatedImageDownload')}
-                  {...(image.url.startsWith('data:')
-                    ? { download: `seekgo-image-${image.id}.${ext}` }
-                    : {})}
+                  title={t('photoViewerOpen')}
+                  aria-haspopup="dialog"
+                  onClick={() => openGeneratedImage(index)}
                 >
                   <img src={image.url} alt={prompt || t('generatedImageAlt')} loading="lazy" />
-                </a>
+                </button>
               )
             })}
           </div>

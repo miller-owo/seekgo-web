@@ -19,6 +19,8 @@ import { ensureApiKey } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
+import { PhotoView } from '../components/photoView/PhotoView.js'
+import { closePhotoView } from '../components/photoView/photoViewState.js'
 import { onUploadNotice } from '../services/attachments.js'
 import { Button } from '../components/base/Button.js'
 import { stopReadAloud } from '../services/speech/readAloud.js'
@@ -70,6 +72,8 @@ export const App = () => {
 
   // 搜索结果面板只属于当前会话
   useEffect(closeSearchPanel, [activeId])
+  // 切换会话时收起图片查看器
+  useEffect(closePhotoView, [activeId])
   // 切换会话时停止朗读
   useEffect(stopReadAloud, [activeId])
   // 移动端选中会话、切换布局后收起抽屉
@@ -142,6 +146,7 @@ export const App = () => {
         <SearchPanel />
       </div>
       <SettingsDialog />
+      <PhotoView />
       <Toast />
     </>
   )

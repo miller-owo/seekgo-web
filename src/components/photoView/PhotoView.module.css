@@ -1,0 +1,18 @@
+/* yarl 的门户挂在 body 上；覆盖样式都收在根 class 下，避免影响其他浮层 */
+.root :global(.yarl__slide_wrapper) {
+  cursor: zoom-in;
+}
+
+.root :global(.yarl__slide_wrapper_interactive) {
+  cursor: grab;
+}
+
+.root :global(.yarl__slide_wrapper_interactive):active {
+  cursor: grabbing;
+}
+
+.root :global(.yarl__counter) {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}

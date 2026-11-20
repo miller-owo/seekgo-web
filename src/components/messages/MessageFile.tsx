@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { useUploads } from '../../services/attachments.js'
 import type { FileAttachment } from '../../services/chat/types.js'
@@ -7,6 +7,7 @@ import { IconPhotoErrorFill20, IconRefreshOutline16 } from '../base/icons.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { FileCard } from '../files/FileCard.js'
 import { useFileView } from '../files/useFileView.js'
+import type { PhotoGroup } from '../photoView/photoGroup.js'
 import styles from './MessageFile.module.css'
 
 /** 历史或失效附件的补传状态：只在还没有 serverId 时显示 */
@@ -27,9 +28,12 @@ const useUploadState = (file: FileAttachment) =>
  */
 export const MessageFile = ({
   file,
+  photoGroup,
   onRetry,
 }: {
   file: FileAttachment
+  /** 同一条消息共用的图片查看器分组 */
+  photoGroup: PhotoGroup
   /** 本条消息补传失败且可重试时提供 */
   onRetry: (() => void) | null
 }) => {
@@ -43,6 +47,18 @@ export const MessageFile = ({
   const errorText = failed ? t(upload.error.key, upload.error.params) : undefined
 
   const retry = retryable ? onRetry : null
+
+  // 图片加载完成后登记到分组，等点开时就能按附件顺序切换
+  const photo = useMemo(
+    () => (image && url ? { src: url, alt: file.name, filename: file.name } : null),
+    [file.name, image, url]
+  )
+  useEffect(() => {
+    if (!photo) {
+      return
+    }
+    return photoGroup.register(file.id, photo)
+  }, [file.id, photo, photoGroup])
 
   if (image && url !== null) {
     const preview = url ? (
@@ -112,11 +128,17 @@ export const MessageFile = ({
       )
     }
 
-    // 正常态：链接到原件
-    return link ? (
-      <a className={clsx(styles.image, styles.imageThumb)} {...link} title={file.name}>
+    // 正常态：点击打开查看器
+    return photo ? (
+      <button
+        type="button"
+        className={clsx(styles.image, styles.imageThumb)}
+        title={file.name}
+        aria-haspopup="dialog"
+        onClick={() => photoGroup.open(file.id)}
+      >
         {preview}
-      </a>
+      </button>
     ) : (
       // 原件还没加载出来（极短暂）
       <div className={styles.image} />

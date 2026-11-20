@@ -32,6 +32,7 @@
 - 多会话、自动标题、重命名和删除。
 - 流式回答、深度思考、停止、继续、编辑提问、重新生成和消息分支。
 - 上传、粘贴和拖拽附件；语音输入和回复朗读。
+- 点击附件或 AI 生图打开全屏图片查看器：缩放、拖动、下载，并可用键盘或滑动切换图片。
 - Markdown、代码高亮、KaTeX 公式和 Mermaid 图表。
 
 ### 搜索与工具
@@ -317,6 +318,8 @@ SeekGo 还包含以下功能级移植：
 
 完整署名和许可文本见 [NOTICE](NOTICE) 与 [`licenses/`](licenses/)。生产构建会把 `LICENSE`、`NOTICE` 和 `licenses/` 复制到 `dist/`；分发时请一并保留。第三方依赖遵循各自的许可证。
 
+图片查看器基于 [yet-another-react-lightbox](https://github.com/igordanchenko/yet-another-react-lightbox)（MIT），许可文本随构建放在 `licenses/yet-another-react-lightbox-LICENSE.txt`。
+
 SeekGo 的 Logo 基于鲸鱼娘形象改编，使用 GPT Image 2.5 制作而来，保持原许可证 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)；上述 MIT 许可证仅适用于源代码，不适用于 Logo。
 
 ### Logo 角色署名（CC BY-NC-SA 4.0）
@@ -331,4 +334,5 @@ SeekGo 的 Logo 基于鲸鱼娘形象改编，使用 GPT Image 2.5 制作而来�
 - [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo)：原始界面。
 - [shanliuling/dsh-image-gen](https://github.com/shanliuling/dsh-image-gen)：生图能力与 Provider 设计。
 - [ranxianglei/billion-context](https://github.com/ranxianglei/billion-context)：模型驱动的上下文压缩与数据面板、费用分析思路。
+- [yet-another-react-lightbox](https://github.com/igordanchenko/yet-another-react-lightbox)：MIT 许可的图片查看器。
 - React、rspack、KaTeX、Mermaid、Prism 和 idb 社区。

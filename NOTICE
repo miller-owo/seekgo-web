@@ -84,5 +84,10 @@ Mermaid, Prism, fflate, idb, and others). Their licenses are available in
 each package's metadata under node_modules and are governed by their own
 terms.
 
+The in-app photo viewer uses yet-another-react-lightbox (MIT License,
+Copyright (c) 2022 Igor Danchenko, https://github.com/igordanchenko/
+yet-another-react-lightbox). Its license text is included in
+licenses/yet-another-react-lightbox-LICENSE.txt for redistributed builds.
+
 SeekGo is an independent project and is not affiliated with or endorsed by
 DeepSeek, shanliuling, or ranxianglei.

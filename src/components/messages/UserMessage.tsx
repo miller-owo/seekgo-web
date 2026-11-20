@@ -1,9 +1,10 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useIsMobile } from '../../app/viewport.js'
 import { IconEditOutline16 } from '../base/icons.js'
 import { getFileViewType, isImage } from '../../services/attachments.js'
+import { createPhotoGroup } from '../photoView/photoGroup.js'
 import { editMessage, retryUpload } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { UserMessage as UserMessageType } from '../../services/chat/types.js'
@@ -47,6 +48,14 @@ export const UserMessage = memo(function UserMessage({
   // 刚发出的消息播一次入场动画；读历史记录或切会话时整页淡入即可
   const [enter] = useState(() => Date.now() - message.createdAt < 1000)
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
+  // 同一条消息里的图片共用一个查看器分组，按附件顺序左右切换
+  const photoGroup = useMemo(
+    () =>
+      createPhotoGroup(
+        message.files.filter((file) => isImage(getFileViewType(file.name))).map((file) => file.id)
+      ),
+    [message.files]
+  )
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current
@@ -77,6 +86,7 @@ export const UserMessage = memo(function UserMessage({
             <MessageFile
               key={file.id}
               file={file}
+              photoGroup={photoGroup}
               onRetry={retryUploadId ? () => retryUpload(sessionId, retryUploadId) : null}
             />
           ))}

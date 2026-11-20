@@ -29,7 +29,12 @@
 }
 
 button.image {
-  cursor: pointer;
+  cursor: zoom-in;
+}
+
+button.image:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
 }
 
 .failedIcon {
