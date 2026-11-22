@@ -58,8 +58,8 @@
 
 ### 环境要求
 
-- Node.js **22.12+**（GitHub Pages 工作流使用 Node 24）
-- pnpm（工作流使用 pnpm 12.6）
+- Node.js **22.12+**
+- pnpm
 - 一个 DeepSeek API Key，或支持所需能力的兼容 API 服务
 
 ### 本地运行
@@ -242,9 +242,9 @@ pnpm build
 # 部署 dist/
 ```
 
-仓库包含 GitHub Pages 工作流（`.github/workflows/pages.yml`）：每次推送到 `main` 时执行类型检查、lint 和构建，然后部署 `dist/`。在仓库的 **Settings → Pages → Source** 中选择 **GitHub Actions** 即可使用。
+仓库不包含托管集成：本地构建后把 `dist/` 上传到任意静态托管即可。
 
-- 部署到子路径时，需要同时配置静态托管和 rspack 的 `publicPath`。
+- 资源使用相对路径（`publicPath: 'auto'`），部署到子路径无需额外配置。
 - 直接用 `file://` 打开 `dist/index.html` 只在浏览器允许 file 页面存储、且 API 服务允许跨域时可用；本地静态服务器更可靠。
 
 ## 开发

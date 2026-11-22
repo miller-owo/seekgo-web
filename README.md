@@ -58,8 +58,8 @@ Most AI chat clients need a server to hold API keys, proxy requests, or store co
 
 ### Requirements
 
-- Node.js **22.12+** (the GitHub Pages workflow uses Node 24)
-- pnpm (the workflow uses pnpm 12.6)
+- Node.js **22.12+**
+- pnpm
 - A DeepSeek API key, or a compatible API endpoint with the required capabilities
 
 ### Run locally
@@ -242,9 +242,9 @@ pnpm build
 # deploy dist/
 ```
 
-The repository includes a GitHub Pages workflow (`.github/workflows/pages.yml`) that runs type checks, lint, and build on every push to `main`, then deploys `dist/`. Enable **Settings → Pages → Source: GitHub Actions** in the repository to use it.
+The repository ships no hosting integration: build locally and upload `dist/` to any static host.
 
-- To deploy under a subpath, configure the static host and the rspack `publicPath` accordingly.
+- Asset URLs are relative (`publicPath: 'auto'`), so deploying under a subpath works without extra configuration.
 - Opening `dist/index.html` directly via `file://` works only if the browser allows storage on file pages and the API service permits cross-origin requests. A local static server is more reliable.
 
 ## Development
